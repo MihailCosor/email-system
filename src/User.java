@@ -1,7 +1,10 @@
+import java.util.List;
+
 public class User {
     private String name;
     private final String email;
     private String password;
+    private EmailClient emailClient;
 
     public User(String name, String email, String password) {
         this.name = name;
@@ -11,6 +14,7 @@ public class User {
             throw new IllegalArgumentException("Invalid email format. Email must end with '@mihail.ro'");
         }
         this.email = email;
+        this.emailClient = new EmailClient(email);
     }
 
     public String getName() {
@@ -28,12 +32,33 @@ public class User {
     public void setName(String name) {
         this.name = name;
     }
+
     public void setPassword(String password) {
         this.password = password;
     }
 
     private boolean isValidEmail(String email) {
-        // check if it ends with "@mihail.ro"
         return email.endsWith("@mihail.ro");
+    }
+
+    public void connectToEmailServer() {
+        emailClient.connect();
+    }
+
+    public void disconnectFromEmailServer() {
+        emailClient.disconnect();
+    }
+
+    public void sendEmail(String to, String subject, String content) {
+        Email email = new Email(this.email, to, subject, content);
+        emailClient.sendEmail(email);
+    }
+
+    public List<Email> getInbox() {
+        return emailClient.getInbox();
+    }
+
+    public void markEmailAsRead(Email email) {
+        emailClient.markAsRead(email);
     }
 }
