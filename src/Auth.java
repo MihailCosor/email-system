@@ -50,13 +50,15 @@ public class Auth {
         return false;
     }
 
-    public void register(String name, String email, String password) {
+    public boolean register(String name, String email, String password) {
         User newUser = new User(name, email, password);
         if(!emailExists(email)) {
             users.add(newUser);
             System.out.println("Registration successful!");
+            return true;
         } else {
             System.out.println("Email already exists.");
+            return false;
         }
     }
 
