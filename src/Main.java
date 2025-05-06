@@ -1,19 +1,14 @@
-import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) {
         Menu menu = Menu.getInstance();
-        menu.display();
+        Auth auth = Auth.getInstance();
+        Menu.setAuthInstance(auth);
 
-        // Initialize EmailServer and EmailClient
-        try {
-            EmailServer server = new EmailServer(12345);
-            new Thread(() -> server.start()).start();
+        // add some dummy users
+        auth.register("Mihail", "admin@mihail.ro", "123");
+        auth.register("John", "john@mihail.ro", "123");
 
-            EmailClient client = new EmailClient("localhost", 12345);
-            client.connect();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Menu.welcomeScreen();
     }
 }

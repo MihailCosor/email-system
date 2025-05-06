@@ -1,9 +1,8 @@
+import java.util.Scanner;
+
 public class Menu {
     private static Menu instance;
-
-    private Menu() {
-        // Private constructor to prevent instantiation
-    }
+    private static Auth authInstance;
 
     public static Menu getInstance() {
         if (instance == null) {
@@ -12,11 +11,69 @@ public class Menu {
         return instance;
     }
 
-    public void display() {
-        System.out.println("1. Send Email");
-        System.out.println("2. Receive Email");
-        System.out.println("3. Delete Email");
-        System.out.println("4. List Emails");
-        // Add more menu options as needed
+    public static void setAuthInstance(Auth auth) {
+        authInstance = auth;
     }
-} 
+
+    public static void authScreen() {
+        System.out.println("Enter your credentials:");
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Email: ");
+        String email = scanner.nextLine();
+
+        System.out.print("Password: ");
+        String password = scanner.nextLine();
+
+        if (authInstance.login(email, password)) {
+            System.out.println("Welcome " + authInstance.getCurrentUser().getName() + "!");
+            // Proceed to the main menu or dashboard
+        } else {
+            System.out.println("Login failed");
+            System.out.println("1. Try again");
+            System.out.println("2. Back to main menu");
+            System.out.print("> ");
+            String choice = scanner.nextLine();
+            switch (choice) {
+                case "1":
+                    authScreen();
+                    break;
+                case "2":
+                    welcomeScreen();
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+    public static void welcomeScreen(){
+        System.out.println("Welcome to the Mail System");
+        System.out.println("1. Login");
+        System.out.println("2. Register -- under development");
+        System.out.println("3. Exit");
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("> ");
+        String choice = scanner.nextLine();
+        switch (choice) {
+            case "1":
+                authScreen();
+                break;
+            case "2":
+                System.out.println("Registering is under development.");
+                break;
+            case "3":
+                System.out.println("Exiting...");
+                break;
+            default:
+                System.out.println("Invalid choice. Please try again.");
+        }
+    }
+
+    public static void dashboardScreen() {
+        System.out.println("Welcome to the Dashboard!");
+
+    }
+
+}
