@@ -59,6 +59,7 @@ public class Auth {
             if (response.startsWith("LOGIN_SUCCESS:")) {
                 String name = response.substring("LOGIN_SUCCESS:".length());
                 currentUser = new User(name, email, password);
+                currentUser.updateLastLogin();
                 System.out.println("Login successful!");
                 return true;
             } else {

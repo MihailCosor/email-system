@@ -177,7 +177,7 @@ public class Menu {
                 email.isRead() ? "READ" : "UNREAD",
                 email.getFrom(),
                 email.getSubject(),
-                email.getTimestamp());
+                email.getTimestamp().getShortDateTime());
         }
     }
 
@@ -197,7 +197,7 @@ public class Menu {
                     i + 1,
                     email.getFrom(),
                     email.getSubject(),
-                    email.getTimestamp());
+                    email.getTimestamp().getShortDateTime());
             }
         }
 
@@ -219,7 +219,7 @@ public class Menu {
                 System.out.println("From: " + email.getFrom());
                 System.out.println("To: " + email.getTo());
                 System.out.println("Subject: " + email.getSubject());
-                System.out.println("Time: " + email.getTimestamp());
+                System.out.println("Time: " + email.getTimestamp().getFormattedDateTime());
                 System.out.println("Status: " + (email.isRead() ? "READ" : "UNREAD"));
                 System.out.println("\nContent:");
                 System.out.println("----------------------------------------");
@@ -283,7 +283,7 @@ public class Menu {
             System.out.println("Email: " + currentUser.getEmail());
             System.out.println("User ID: " + currentUser.getId());
             System.out.println("Account Status: Active");
-            System.out.println("Last Login: " + java.time.LocalDateTime.now());
+            System.out.println("Last Login: " + currentUser.getLastLogin().getFormattedDateTime());
             System.out.println("----------------------------------------");
         } else {
             System.out.println("Error retrieving profile information.");

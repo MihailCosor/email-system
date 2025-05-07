@@ -1,12 +1,11 @@
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 public class Email implements Serializable {
     private String from;
     private String to;
     private String subject;
     private String content;
-    private LocalDateTime timestamp;
+    private DateTime timestamp;
     private boolean isRead;
 
     public Email(String from, String to, String subject, String content) {
@@ -14,7 +13,7 @@ public class Email implements Serializable {
         this.to = to;
         this.subject = subject;
         this.content = content;
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = DateTime.now();
         this.isRead = false;
     }
 
@@ -23,7 +22,7 @@ public class Email implements Serializable {
     public String getTo() { return to; }
     public String getSubject() { return subject; }
     public String getContent() { return content; }
-    public LocalDateTime getTimestamp() { return timestamp; }
+    public DateTime getTimestamp() { return timestamp; }
     public boolean isRead() { return isRead; }
 
     // Setters
