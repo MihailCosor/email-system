@@ -42,10 +42,11 @@ public class Auth {
     public void logout() {
         currentUser = null;
         try {
-            if (out != null) out.close();
-            if (in != null) in.close();
-            if (serverSocket != null) serverSocket.close();
-        } catch (IOException e) {
+            // if (out != null) out.close();
+            // if (in != null) in.close();
+            // if (serverSocket != null) serverSocket.close();
+        // } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -100,10 +101,11 @@ public class Auth {
 
     public void close() {
         try {
-            if (out != null) out.close();
-            if (in != null) in.close();
-            if (serverSocket != null) serverSocket.close();
-        } catch (IOException e) {
+            // if (out != null) out.close();
+            // if (in != null) in.close();
+            // if (serverSocket != null) serverSocket.close();
+        // } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

@@ -187,11 +187,11 @@ public class Menu {
     }
 
     private void handleSendEmail() {
-        System.out.println("\nDo you want to select from contacts? (y/n): ");
-        String choice = scanner.nextLine().trim().toLowerCase();
-        String to;
+        System.out.println("\n1. Do you want to select from contacts?: ");
+        int choice = getIntInput();
+        String to = null;
 
-        if (choice.equals("y")) {
+        if (choice == 1) {
             List<Contact> contacts = auth.getCurrentUser().getContactsList();
             if (contacts.isEmpty()) {
                 System.out.println("No contacts found. Please enter email manually.");
@@ -214,7 +214,8 @@ public class Menu {
                     System.out.println("Invalid contact number. Please try again.");
                 }
             }
-        } else {
+        }
+        if (to == null) {
             System.out.print("Enter recipient's email: ");
             to = scanner.nextLine();
         }
@@ -229,8 +230,14 @@ public class Menu {
             content.append(line).append("\n");
         }
         
-        emailClient.sendEmail(to, subject, content.toString());
-        System.out.println("Email sent successfully.");
+        try {
+            boolean success = emailClient.sendEmail(to, subject, content.toString());
+            if (success) {
+                System.out.println("Email sent successfully.");
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to send email: " + e.getMessage());
+        }
     }
 
     private void handleViewInbox() {

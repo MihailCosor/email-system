@@ -204,7 +204,7 @@ public class EmailClient {
         return (String) response;
     }
 
-    public void sendEmail(String to, String subject, String content) {
+    public boolean sendEmail(String to, String subject, String content) {
         try {
             Email email = new Email(userEmail, to, subject, content);
             out.writeObject("SEND_EMAIL:" + userEmail);
@@ -214,9 +214,12 @@ public class EmailClient {
             String response = waitForResponse();
             if (!response.equals("SEND_SUCCESS")) {
                 System.out.println("Failed to send email: " + response);
+                return false;
             }
+            return true;
         } catch (Exception e) {
             System.out.println("Error sending email: " + e.getMessage());
+            return false;
         }
     }
 
@@ -226,10 +229,11 @@ public class EmailClient {
             if (inboxListener != null) {
                 inboxListener.interrupt();
             }
-            if (out != null) out.close();
-            if (in != null) in.close();
-            if (socket != null) socket.close();
-        } catch (IOException e) {
+            // if (out != null) out.close();
+            // if (in != null) in.close();
+            // if (socket != null) socket.close();
+        // } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

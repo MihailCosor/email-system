@@ -44,10 +44,8 @@ public class EmailServer {
         adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email", "This is a test email"));
         adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email 2", "This is a test email 2"));
         
-        users.get(admin.getId()).addContact("Test User", "test@mihail.ro");
-        users.get(admin.getId()).addContact("Another Admin", "admin@mihail.ro");
-        users.get(test.getId()).addContact("Admin User", "admin@mihail.ro");
-        users.get(test.getId()).addContact("Test Contact", "test@mihail.ro");
+        users.get(admin.getId()).addContact("Test", "test@mihail.ro");
+        users.get(test.getId()).addContact("Admin", "admin@mihail.ro");
     }
 
     private void initializeUserFolders(String email) {
@@ -113,6 +111,8 @@ public class EmailServer {
                                 handleLogin(command.substring(6), in, out);
                             } else if (command.startsWith("REGISTER:")) {
                                 handleRegister(command.substring(9), in, out);
+                            } else if (command.startsWith("SEND_EMAIL:")) {
+                                // just skip as we don't need to send anything back
                             } else {
                                 handleCommand(command, out);
                             }
@@ -312,6 +312,30 @@ public class EmailServer {
                 }
             } else {
                 System.out.println("Email stored for offline user " + recipientEmail);
+            }
+            
+            // Send success response back to sender
+            ObjectOutputStream senderStream = clientOutputStreams.get(email.getFrom());
+            if (senderStream != null) {
+                try {
+                    senderStream.writeObject("SEND_SUCCESS");
+                    senderStream.flush();
+                } catch (IOException e) {
+                    System.out.println("Failed to send success response to " + email.getFrom());
+                    clientOutputStreams.remove(email.getFrom());
+                }
+            }
+        } else {
+            // Send failure response back to sender
+            ObjectOutputStream senderStream = clientOutputStreams.get(email.getFrom());
+            if (senderStream != null) {
+                try {
+                    senderStream.writeObject("SEND_FAILED:Recipient not found");
+                    senderStream.flush();
+                } catch (IOException e) {
+                    System.out.println("Failed to send failure response to " + email.getFrom());
+                    clientOutputStreams.remove(email.getFrom());
+                }
             }
         }
     }
