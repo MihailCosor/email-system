@@ -4,20 +4,14 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 
-public class User implements Serializable {
-    private static int nextId = 1;
-    private int id;
-    private String name;
-    private String email;
+public class User extends Person {
     private String password;
     private DateTime lastLogin;
     private transient EmailClient emailClient;
     private Set<Contact> contacts;
 
     public User(String name, String email, String password) {
-        this.id = nextId++;
-        this.name = name;
-        this.email = email;
+        super(name, email);
         this.password = password;
         this.lastLogin = DateTime.now();
         this.contacts = new HashSet<>();
@@ -38,14 +32,10 @@ public class User implements Serializable {
         initializeEmailClient();
     }
 
-    public int getId() { return id; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
     public String getPassword() { return password; }
     public DateTime getLastLogin() { return lastLogin; }
     public EmailClient getEmailClient() { return emailClient; }
 
-    public void setName(String name) { this.name = name; }
     public void setPassword(String password) { this.password = password; }
     public void setLastLogin(DateTime lastLogin) { this.lastLogin = lastLogin; }
 
