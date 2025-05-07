@@ -48,7 +48,11 @@ public class EmailServer {
         mailboxes.get(admin.getEmail()).add(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email", "This is a test email"));
         mailboxes.get(admin.getEmail()).add(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email 2", "This is a test email 2"));
         
-        
+        // Add dummy contacts
+        users.get(admin.getId()).addContact("Test User", "test@mihail.ro");
+        users.get(admin.getId()).addContact("Another Admin", "admin@mihail.ro");
+        users.get(test.getId()).addContact("Admin User", "admin@mihail.ro");
+        users.get(test.getId()).addContact("Test Contact", "test@mihail.ro");
     }
 
     public static EmailServer getInstance() {
@@ -163,18 +167,18 @@ public class EmailServer {
         String password = parts[1];
 
         Integer userId = emailToId.get(email);
-        if (userId == null) {
-            out.writeObject("LOGIN_FAILED:Invalid email or password");
-            out.flush();
-            return;
-        }
-
-        User user = users.get(userId);
-        if (user != null && user.getPassword().equals(password)) {
-            out.writeObject("LOGIN_SUCCESS:" + user.getName());
-            out.flush();
+        if (userId != null) {
+            User user = users.get(userId);
+            if (user != null && user.getPassword().equals(password)) {
+                out.writeObject("LOGIN_SUCCESS");
+                out.writeObject(user);
+                out.flush();
+            } else {
+                out.writeObject("LOGIN_FAILED:Invalid email or password");
+                out.flush();
+            }
         } else {
-            out.writeObject("LOGIN_FAILED:Invalid email or password");
+            out.writeObject("LOGIN_FAILED:User not found");
             out.flush();
         }
     }

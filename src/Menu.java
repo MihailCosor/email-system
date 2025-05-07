@@ -1,5 +1,6 @@
 import java.util.Scanner;
 import java.util.List;
+import java.util.Set;
 
 public class Menu {
     private Scanner scanner;
@@ -73,7 +74,8 @@ public class Menu {
             System.out.println("1. Send Email");
             System.out.println("2. View Inbox");
             System.out.println("3. View Profile");
-            System.out.println("4. Logout");
+            System.out.println("4. Manage Contacts");
+            System.out.println("5. Logout");
             System.out.print("Choose an option: ");
 
             int choice = getIntInput();
@@ -88,6 +90,9 @@ public class Menu {
                     handleViewProfile();
                     break;
                 case 4:
+                    handleContactsMenu();
+                    break;
+                case 5:
                     handleLogout();
                     return;
                 default:
@@ -96,9 +101,107 @@ public class Menu {
         }
     }
 
+    private void handleContactsMenu() {
+        while (true) {
+            System.out.println("\n=== Contacts Menu ===");
+            System.out.println("1. List Contacts");
+            System.out.println("2. Add Contact");
+            System.out.println("3. Remove Contact");
+            System.out.println("4. Back to Main Menu");
+            System.out.print("Choose an option: ");
+
+            int choice = getIntInput();
+            switch (choice) {
+                case 1:
+                    listContacts();
+                    break;
+                case 2:
+                    addContact();
+                    break;
+                case 3:
+                    removeContact();
+                    break;
+                case 4:
+                    return;
+                default:
+                    System.out.println("Invalid option. Please try again.");
+            }
+        }
+    }
+
+    private void listContacts() {
+        List<Contact> contacts = auth.getCurrentUser().getContactsList();
+        if (contacts.isEmpty()) {
+            System.out.println("No contacts found.");
+            return;
+        }
+
+        System.out.println("\n=== Contact List ===");
+        for (int i = 0; i < contacts.size(); i++) {
+            System.out.printf("%d. %s%n", i + 1, contacts.get(i));
+        }
+        System.out.println("----------------------------------------");
+    }
+
+    private void addContact() {
+        System.out.print("Enter contact name: ");
+        String name = scanner.nextLine();
+        System.out.print("Enter contact email: ");
+        String email = scanner.nextLine();
+
+        if (auth.getCurrentUser().addContact(name, email)) {
+            System.out.println("Contact added successfully!");
+        } else {
+            System.out.println("Contact already exists.");
+        }
+    }
+
+    private void removeContact() {
+        List<Contact> contacts = auth.getCurrentUser().getContactsList();
+        if (contacts.isEmpty()) {
+            System.out.println("No contacts to remove.");
+            return;
+        }
+
+        System.out.println("\n=== Contact List ===");
+        for (int i = 0; i < contacts.size(); i++) {
+            System.out.printf("%d. %s%n", i + 1, contacts.get(i));
+        }
+        System.out.println("----------------------------------------");
+        
+        System.out.print("Enter contact number: ");
+        int contactNumber = getIntInput();
+        
+        if (contactNumber < 1 || contactNumber > contacts.size()) {
+            System.out.println("Invalid contact number.");
+            return;
+        }
+
+        Contact contactToRemove = contacts.get(contactNumber - 1);
+        if (auth.getCurrentUser().removeContact(contactToRemove)) {
+            System.out.println("Contact removed successfully!");
+        } else {
+            System.out.println("Failed to remove contact.");
+        }
+    }
+
     private void handleSendEmail() {
-        System.out.print("Enter recipient's email: ");
-        String to = scanner.nextLine();
+        System.out.println("\nChoose recipient:");
+        System.out.println("1. Select from contacts");
+        System.out.println("2. Enter email manually");
+        System.out.print("Choose an option: ");
+
+        int choice = getIntInput();
+        String to;
+
+        if (choice == 1) {
+            listContacts();
+            System.out.print("Enter contact email: ");
+            to = scanner.nextLine();
+        } else {
+            System.out.print("Enter recipient's email: ");
+            to = scanner.nextLine();
+        }
         
         System.out.print("Enter subject: ");
         String subject = scanner.nextLine();

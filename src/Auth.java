@@ -56,12 +56,19 @@ public class Auth {
             out.flush();
             
             String response = (String) in.readObject();
-            if (response.startsWith("LOGIN_SUCCESS:")) {
-                String name = response.substring("LOGIN_SUCCESS:".length());
-                currentUser = new User(name, email, password);
+            if (response.equals("LOGIN_SUCCESS")) {
+                currentUser = (User) in.readObject();
                 currentUser.updateLastLogin();
-                System.out.println("Login successful!");
-                return true;
+                
+                // Connect to email server
+                if (currentUser.getEmailClient().connect(email)) {
+                    System.out.println("Login successful!");
+                    return true;
+                } else {
+                    System.out.println("Failed to connect to email server");
+                    currentUser = null;
+                    return false;
+                }
             } else {
                 System.out.println(response.substring("LOGIN_FAILED:".length()));
                 return false;
