@@ -39,6 +39,16 @@ public class EmailServer {
         // Create email to ID mapping
         emailToId.put(admin.getEmail(), admin.getId());
         emailToId.put(test.getEmail(), test.getId());
+
+        // Add some dummy emails to the mailboxes
+        mailboxes.put(admin.getEmail(), new ArrayList<>());
+        mailboxes.put(test.getEmail(), new ArrayList<>());
+
+        // Add dummy emails to admin's mailbox
+        mailboxes.get(admin.getEmail()).add(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email", "This is a test email"));
+        mailboxes.get(admin.getEmail()).add(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email 2", "This is a test email 2"));
+        
+        
     }
 
     public static EmailServer getInstance() {
@@ -98,6 +108,12 @@ public class EmailServer {
                                 handleLogin(command.substring(6), in, out);
                             } else if (command.startsWith("REGISTER:")) {
                                 handleRegister(command.substring(9), in, out);
+                            } else if (command.startsWith("DELETE_EMAIL:")) {
+                                handleDeleteEmail(command, out);
+                            } else if (command.startsWith("MARK_READ:")) {
+                                handleMarkEmail(command, true, out);
+                            } else if (command.startsWith("MARK_UNREAD:")) {
+                                handleMarkEmail(command, false, out);
                             } else {
                                 // Handle email connection
                                 String email = command;
@@ -179,6 +195,36 @@ public class EmailServer {
         users.put(newUser.getId(), newUser);
         emailToId.put(email, newUser.getId());
         out.writeObject("REGISTER_SUCCESS");
+        out.flush();
+    }
+
+    private void handleDeleteEmail(String emailData, ObjectOutputStream out) throws IOException {
+        String[] parts = emailData.split(":");
+        String userEmail = parts[1];
+        int emailIndex = Integer.parseInt(parts[2]);
+
+        List<Email> userEmails = mailboxes.get(userEmail);
+        if (userEmails != null && emailIndex >= 0 && emailIndex < userEmails.size()) {
+            userEmails.remove(emailIndex);
+            out.writeObject("DELETE_SUCCESS");
+        } else {
+            out.writeObject("DELETE_FAILED:Invalid email index");
+        }
+        out.flush();
+    }
+
+    private void handleMarkEmail(String emailData, boolean markAsRead, ObjectOutputStream out) throws IOException {
+        String[] parts = emailData.split(":");
+        String userEmail = parts[1];
+        int emailIndex = Integer.parseInt(parts[2]);
+
+        List<Email> userEmails = mailboxes.get(userEmail);
+        if (userEmails != null && emailIndex >= 0 && emailIndex < userEmails.size()) {
+            userEmails.get(emailIndex).setRead(markAsRead);
+            out.writeObject("MARK_SUCCESS");
+        } else {
+            out.writeObject("MARK_FAILED:Invalid email index");
+        }
         out.flush();
     }
 

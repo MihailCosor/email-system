@@ -3,15 +3,13 @@ import java.net.*;
 
 public class Auth {
     private static Auth instance;
-    private User user;
-    private boolean isLoggedIn;
+    private User currentUser;
     private Socket serverSocket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
 
     private Auth() {
-        this.user = null;
-        this.isLoggedIn = false;
+        this.currentUser = null;
         connectToServer();
     }
 
@@ -34,21 +32,22 @@ public class Auth {
     }
 
     public boolean isLoggedIn() {
-        return isLoggedIn;
+        return currentUser != null;
     }
 
     public User getCurrentUser() {
-        return user;
-    }
-
-    public void setCurrentUser(User user) {
-        this.user = user;
-        this.isLoggedIn = true;
+        return currentUser;
     }
 
     public void logout() {
-        this.user = null;
-        this.isLoggedIn = false;
+        currentUser = null;
+        try {
+            if (out != null) out.close();
+            if (in != null) in.close();
+            if (serverSocket != null) serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public boolean login(String email, String password) {
@@ -59,8 +58,7 @@ public class Auth {
             String response = (String) in.readObject();
             if (response.startsWith("LOGIN_SUCCESS:")) {
                 String name = response.substring("LOGIN_SUCCESS:".length());
-                this.user = new User(name, email, password);
-                this.isLoggedIn = true;
+                currentUser = new User(name, email, password);
                 System.out.println("Login successful!");
                 return true;
             } else {

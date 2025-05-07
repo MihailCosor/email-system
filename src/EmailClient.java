@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class EmailClient {
     private Socket socket;
@@ -10,10 +11,12 @@ public class EmailClient {
     private boolean connected;
     private List<Email> inbox;
     private Thread inboxListener;
+    private BlockingQueue<Object> responseQueue;
 
     public EmailClient() {
         this.inbox = new ArrayList<>();
         this.connected = false;
+        this.responseQueue = new LinkedBlockingQueue<>();
     }
 
     public boolean connect(String email) {
@@ -60,7 +63,8 @@ public class EmailClient {
                     if (obj instanceof Email) {
                         Email email = (Email) obj;
                         inbox.add(email);
-                        // System.out.println("\nNew email received from " + email.getFrom());
+                    } else if (obj instanceof String) {
+                        responseQueue.offer(obj);
                     }
                 } catch (EOFException | SocketException e) {
                     // Server disconnected
@@ -73,6 +77,14 @@ public class EmailClient {
             }
         });
         inboxListener.start();
+    }
+
+    private String waitForResponse() throws InterruptedException {
+        Object response = responseQueue.poll(5, TimeUnit.SECONDS);
+        if (response == null) {
+            throw new InterruptedException("Timeout waiting for response");
+        }
+        return (String) response;
     }
 
     public boolean sendEmail(String to, String subject, String content) {
@@ -104,6 +116,51 @@ public class EmailClient {
             if (socket != null) socket.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void deleteEmail(int emailIndex) {
+        try {
+            out.writeObject("DELETE_EMAIL:" + userEmail + ":" + emailIndex);
+            String response = waitForResponse();
+            if (!response.equals("DELETE_SUCCESS")) {
+                System.out.println("Failed to delete email: " + response);
+            }
+
+            // Update local inbox
+            inbox.remove(emailIndex);
+        } catch (Exception e) {
+            System.out.println("Error deleting email: " + e.getMessage());
+        }
+    }
+
+    public void markEmailAsRead(int emailIndex) {
+        try {
+            out.writeObject("MARK_READ:" + userEmail + ":" + emailIndex);
+            String response = waitForResponse();
+            if (!response.equals("MARK_SUCCESS")) {
+                System.out.println("Failed to mark email as read: " + response);
+            }
+
+            // Update local inbox
+            inbox.get(emailIndex).setRead(true);
+        } catch (Exception e) {
+            System.out.println("Error marking email as read: " + e.getMessage());
+        }
+    }
+
+    public void markEmailAsUnread(int emailIndex) {
+        try {
+            out.writeObject("MARK_UNREAD:" + userEmail + ":" + emailIndex);
+            String response = waitForResponse();
+            if (!response.equals("MARK_SUCCESS")) {
+                System.out.println("Failed to mark email as unread: " + response);
+            }
+
+            // Update local inbox
+            inbox.get(emailIndex).setRead(false);
+        } catch (Exception e) {
+            System.out.println("Error marking email as unread: " + e.getMessage());
         }
     }
 } 
