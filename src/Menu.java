@@ -1,6 +1,7 @@
 import java.util.Scanner;
 import java.util.List;
-import java.util.Set;
+import java.util.ArrayList;
+import java.io.IOException;
 
 public class Menu {
     private Scanner scanner;
@@ -186,18 +187,33 @@ public class Menu {
     }
 
     private void handleSendEmail() {
-        System.out.println("\nChoose recipient:");
-        System.out.println("1. Select from contacts");
-        System.out.println("2. Enter email manually");
-        System.out.print("Choose an option: ");
-
-        int choice = getIntInput();
+        System.out.println("\nDo you want to select from contacts? (y/n): ");
+        String choice = scanner.nextLine().trim().toLowerCase();
         String to;
 
-        if (choice == 1) {
-            listContacts();
-            System.out.print("Enter contact email: ");
-            to = scanner.nextLine();
+        if (choice.equals("y")) {
+            List<Contact> contacts = auth.getCurrentUser().getContactsList();
+            if (contacts.isEmpty()) {
+                System.out.println("No contacts found. Please enter email manually.");
+                System.out.print("Enter recipient's email: ");
+                to = scanner.nextLine();
+            } else {
+                System.out.println("\n=== Contact List ===");
+                for (int i = 0; i < contacts.size(); i++) {
+                    System.out.printf("%d. %s%n", i + 1, contacts.get(i));
+                }
+                System.out.println("----------------------------------------");
+                
+                while (true) {
+                    System.out.print("Enter contact number: ");
+                    int contactNum = getIntInput();
+                    if (contactNum >= 1 && contactNum <= contacts.size()) {
+                        to = contacts.get(contactNum - 1).getEmail();
+                        break;
+                    }
+                    System.out.println("Invalid contact number. Please try again.");
+                }
+            }
         } else {
             System.out.print("Enter recipient's email: ");
             to = scanner.nextLine();
@@ -218,47 +234,22 @@ public class Menu {
     }
 
     private void handleViewInbox() {
-        displayInboxMenu();
-    }
-
-    private void displayInboxMenu() {
         while (true) {
-            System.out.println("\n=== Inbox Menu ===");
-            System.out.println("1. View all emails");
-            System.out.println("2. View unread emails");
-            System.out.println("3. View full email");
-            System.out.println("4. Send new email");
-            System.out.println("5. Delete email");
-            System.out.println("6. Mark email as read");
-            System.out.println("7. Mark email as unread");
-            System.out.println("8. Back to main menu");
-            System.out.print("Choose an option: ");
+            System.out.println("\n=== Folders ===");
+            System.out.println("1. Inbox");
+            System.out.println("2. Spam");
+            System.out.println("3. Back to Main Menu");
+            System.out.print("Choose a folder: ");
 
             int choice = getIntInput();
-
             switch (choice) {
                 case 1:
-                    viewAllEmails();
+                    handleFolderView("inbox");
                     break;
                 case 2:
-                    viewUnreadEmails();
+                    handleFolderView("spam");
                     break;
                 case 3:
-                    viewFullEmail();
-                    break;
-                case 4:
-                    handleSendEmail();
-                    break;
-                case 5:
-                    deleteEmail();
-                    break;
-                case 6:
-                    markEmailAsRead();
-                    break;
-                case 7:
-                    markEmailAsUnread();
-                    break;
-                case 8:
                     return;
                 default:
                     System.out.println("Invalid option. Please try again.");
@@ -266,109 +257,131 @@ public class Menu {
         }
     }
 
-    private void viewAllEmails() {
-        List<Email> emails = emailClient.getInbox();
-        if (emails.isEmpty()) {
-            System.out.println("No emails in inbox.");
-            return;
-        }
+    private void handleFolderView(String folderName) {
+        while (true) {
+            List<Email> emails = folderName.equals("inbox") ? 
+                emailClient.getInbox() : emailClient.getSpam();
+            
+            System.out.println("\n=== " + folderName.toUpperCase() + " ===");
+            if (!emails.isEmpty()) {
+                for (int i = 0; i < emails.size(); i++) {
+                    Email email = emails.get(i);
+                    System.out.printf("%d. [%s] From: %s, Subject: %s, Time: %s%n",
+                        i + 1,
+                        email.isRead() ? "READ" : "UNREAD",
+                        email.getFrom(),
+                        email.getSubject(),
+                        email.getTimestamp().getShortDateTime());
+                }
+            } else {
+                System.out.println("No emails in this folder.");
+            }
+            System.out.println("----------------------------------------");
 
-        for (int i = 0; i < emails.size(); i++) {
-            Email email = emails.get(i);
-            System.out.printf("%d. [%s] From: %s, Subject: %s, Time: %s%n",
-                i + 1,
-                email.isRead() ? "READ" : "UNREAD",
-                email.getFrom(),
-                email.getSubject(),
-                email.getTimestamp().getShortDateTime());
-        }
-    }
+            System.out.println("\n=== " + folderName.toUpperCase() + " Options ===");
+            System.out.println("1. View Full Email");
+            System.out.println("2. Mark as Read");
+            System.out.println("3. Mark as Unread");
+            System.out.println("4. Delete Email");
+            System.out.println("5. Move to " + (folderName.equals("inbox") ? "Spam" : "Inbox"));
+            System.out.println("6. Back to Folders");
+            System.out.print("Choose an option: ");
 
-    private void viewUnreadEmails() {
-        List<Email> emails = emailClient.getInbox();
-        if (emails.isEmpty()) {
-            System.out.println("No emails in inbox.");
-            return;
-        }
+            int choice = getIntInput();
+            if (emails.isEmpty() && choice != 6) {
+                System.out.println("No emails to perform operations on.");
+                continue;
+            }
 
-        boolean hasUnread = false;
-        for (int i = 0; i < emails.size(); i++) {
-            Email email = emails.get(i);
-            if (!email.isRead()) {
-                hasUnread = true;
-                System.out.printf("%d. From: %s, Subject: %s, Time: %s%n",
-                    i + 1,
-                    email.getFrom(),
-                    email.getSubject(),
-                    email.getTimestamp().getShortDateTime());
+            switch (choice) {
+                case 1:
+                    viewFullEmailInFolder(emails);
+                    break;
+                case 2:
+                    markEmailInFolder(emails, true);
+                    break;
+                case 3:
+                    markEmailInFolder(emails, false);
+                    break;
+                case 4:
+                    deleteEmailInFolder(emails);
+                    break;
+                case 5:
+                    moveEmailBetweenFolders(emails, folderName);
+                    break;
+                case 6:
+                    return;
+                default:
+                    System.out.println("Invalid option. Please try again.");
             }
         }
-
-        if (!hasUnread) {
-            System.out.println("No unread emails.");
-        }
     }
 
-    private void viewFullEmail() {
-        viewAllEmails();
+    private void viewFullEmailInFolder(List<Email> emails) {
         System.out.print("\nEnter the number of the email to view (0 to cancel): ");
         int choice = getIntInput();
 
-        if (choice > 0) {
-            List<Email> emails = emailClient.getInbox();
-            if (choice <= emails.size()) {
-                Email email = emails.get(choice - 1);
-                System.out.println("\n=== Email Details ===");
-                System.out.println("From: " + email.getFrom());
-                System.out.println("To: " + email.getTo());
-                System.out.println("Subject: " + email.getSubject());
-                System.out.println("Time: " + email.getTimestamp().getFormattedDateTime());
-                System.out.println("Status: " + (email.isRead() ? "READ" : "UNREAD"));
-                System.out.println("\nContent:");
-                System.out.println("----------------------------------------");
-                System.out.println(email.getContent());
-                System.out.println("----------------------------------------");
-                
-                // Mark as read when viewing
-                if (!email.isRead()) {
-                    emailClient.markEmailAsRead(choice - 1);
-                }
-            } else {
-                System.out.println("Invalid email number.");
+        if (choice > 0 && choice <= emails.size()) {
+            Email email = emails.get(choice - 1);
+            System.out.println("\n=== Email Details ===");
+            System.out.println("From: " + email.getFrom());
+            System.out.println("To: " + email.getTo());
+            System.out.println("Subject: " + email.getSubject());
+            System.out.println("Time: " + email.getTimestamp().getFormattedDateTime());
+            System.out.println("Status: " + (email.isRead() ? "READ" : "UNREAD"));
+            System.out.println("\nContent:");
+            System.out.println("----------------------------------------");
+            System.out.println(email.getContent());
+            System.out.println("----------------------------------------");
+            
+            if (!email.isRead()) {
+                emailClient.markEmailAsRead(choice - 1);
             }
+        } else if (choice != 0) {
+            System.out.println("Invalid email number.");
         }
     }
 
-    private void deleteEmail() {
-        viewAllEmails();
-        System.out.print("Enter the number of the email to delete (0 to cancel): ");
+    private void markEmailInFolder(List<Email> emails, boolean markAsRead) {
+        System.out.printf("\nEnter the number of the email to mark as %s (0 to cancel): ", 
+            markAsRead ? "read" : "unread");
         int choice = getIntInput();
 
-        if (choice > 0) {
+        if (choice > 0 && choice <= emails.size()) {
+            if (markAsRead) {
+                emailClient.markEmailAsRead(choice - 1);
+                System.out.println("Email marked as read.");
+            } else {
+                emailClient.markEmailAsUnread(choice - 1);
+                System.out.println("Email marked as unread.");
+            }
+        } else if (choice != 0) {
+            System.out.println("Invalid email number.");
+        }
+    }
+
+    private void deleteEmailInFolder(List<Email> emails) {
+        System.out.print("\nEnter the number of the email to delete (0 to cancel): ");
+        int choice = getIntInput();
+
+        if (choice > 0 && choice <= emails.size()) {
             emailClient.deleteEmail(choice - 1);
             System.out.println("Email deleted successfully.");
+        } else if (choice != 0) {
+            System.out.println("Invalid email number.");
         }
     }
 
-    private void markEmailAsRead() {
-        viewAllEmails();
-        System.out.print("Enter the number of the email to mark as read (0 to cancel): ");
+    private void moveEmailBetweenFolders(List<Email> emails, String currentFolder) {
+        System.out.print("\nEnter the number of the email to move (0 to cancel): ");
         int choice = getIntInput();
 
-        if (choice > 0) {
-            emailClient.markEmailAsRead(choice - 1);
-            System.out.println("Email marked as read.");
-        }
-    }
-
-    private void markEmailAsUnread() {
-        viewAllEmails();
-        System.out.print("Enter the number of the email to mark as unread (0 to cancel): ");
-        int choice = getIntInput();
-
-        if (choice > 0) {
-            emailClient.markEmailAsUnread(choice - 1);
-            System.out.println("Email marked as unread.");
+        if (choice > 0 && choice <= emails.size()) {
+            String targetFolder = currentFolder.equals("inbox") ? "spam" : "inbox";
+            emailClient.moveEmailToFolder(choice - 1, targetFolder);
+            System.out.println("Email moved to " + targetFolder + ".");
+        } else if (choice != 0) {
+            System.out.println("Invalid email number.");
         }
     }
 

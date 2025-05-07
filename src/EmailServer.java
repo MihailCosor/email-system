@@ -8,7 +8,7 @@ public class EmailServer {
     private ServerSocket serverSocket;
     private final int PORT = 12345;
     private boolean running;
-    private Map<String, List<Email>> mailboxes;
+    private Map<String, Map<String, Folder>> userFolders; // email -> folder map
     private Map<String, ObjectOutputStream> clientOutputStreams;
     private ExecutorService executorService;
     private boolean isServerMode;
@@ -17,7 +17,7 @@ public class EmailServer {
 
     private EmailServer(boolean isServerMode) {
         this.isServerMode = isServerMode;
-        this.mailboxes = new ConcurrentHashMap<>();
+        this.userFolders = new ConcurrentHashMap<>();
         this.users = new ConcurrentHashMap<>();
         this.emailToId = new ConcurrentHashMap<>();     
         if (isServerMode) {
@@ -28,31 +28,33 @@ public class EmailServer {
     }
 
     private void initializeDummyUsers() {
-        // Add some dummy users for mails admin@mihail.ro and test@mihail.ro
         User admin = new User("Admin", "admin@mihail.ro", "admin");
         User test = new User("Test", "test@mihail.ro", "test");
         
-        // Store users by ID
         users.put(admin.getId(), admin);
         users.put(test.getId(), test);
         
-        // Create email to ID mapping
         emailToId.put(admin.getEmail(), admin.getId());
         emailToId.put(test.getEmail(), test.getId());
 
-        // Add some dummy emails to the mailboxes
-        mailboxes.put(admin.getEmail(), new ArrayList<>());
-        mailboxes.put(test.getEmail(), new ArrayList<>());
+        initializeUserFolders(admin.getEmail());
+        initializeUserFolders(test.getEmail());
 
-        // Add dummy emails to admin's mailbox
-        mailboxes.get(admin.getEmail()).add(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email", "This is a test email"));
-        mailboxes.get(admin.getEmail()).add(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email 2", "This is a test email 2"));
+        Folder adminInbox = userFolders.get(admin.getEmail()).get("inbox");
+        adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email", "This is a test email"));
+        adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email 2", "This is a test email 2"));
         
-        // Add dummy contacts
         users.get(admin.getId()).addContact("Test User", "test@mihail.ro");
         users.get(admin.getId()).addContact("Another Admin", "admin@mihail.ro");
         users.get(test.getId()).addContact("Admin User", "admin@mihail.ro");
         users.get(test.getId()).addContact("Test Contact", "test@mihail.ro");
+    }
+
+    private void initializeUserFolders(String email) {
+        Map<String, Folder> folders = new HashMap<>();
+        folders.put("inbox", new Folder("inbox", true));
+        folders.put("spam", new Folder("spam", true));
+        userFolders.put(email, folders);
     }
 
     public static EmailServer getInstance() {
@@ -74,7 +76,6 @@ public class EmailServer {
             running = true;
             System.out.println("Email server started on port " + PORT);
 
-            // Accept client connections in a separate thread
             new Thread(() -> {
                 while (running) {
                     try {
@@ -112,34 +113,8 @@ public class EmailServer {
                                 handleLogin(command.substring(6), in, out);
                             } else if (command.startsWith("REGISTER:")) {
                                 handleRegister(command.substring(9), in, out);
-                            } else if (command.startsWith("DELETE_EMAIL:")) {
-                                handleDeleteEmail(command, out);
-                            } else if (command.startsWith("MARK_READ:")) {
-                                handleMarkEmail(command, true, out);
-                            } else if (command.startsWith("MARK_UNREAD:")) {
-                                handleMarkEmail(command, false, out);
                             } else {
-                                // Handle email connection
-                                String email = command;
-                                Integer userId = emailToId.get(email);
-                                if (userId != null && users.containsKey(userId)) {
-                                    // First send connection confirmation
-                                    out.writeObject("CONNECTED");
-                                    out.flush();
-                                    
-                                    // Then store the client's output stream
-                                    clientOutputStreams.put(email, out);
-                                    
-                                    // Finally send any stored emails
-                                    List<Email> storedEmails = mailboxes.getOrDefault(email, new ArrayList<>());
-                                    for (Email storedEmail : storedEmails) {
-                                        out.writeObject(storedEmail);
-                                        out.flush();
-                                    }
-                                } else {
-                                    out.writeObject("CONNECTION_FAILED:User not found");
-                                    out.flush();
-                                }
+                                handleCommand(command, out);
                             }
                         } else if (obj instanceof Email) {
                             Email email = (Email) obj;
@@ -159,6 +134,20 @@ public class EmailServer {
                 }
             }
         });
+    }
+
+    private void handleCommand(String command, ObjectOutputStream out) throws IOException {
+        if (command.startsWith("MOVE_EMAIL:")) {
+            handleMoveEmail(command, out);
+        } else if (command.startsWith("DELETE_EMAIL:")) {
+            handleDeleteEmail(command, out);
+        } else if (command.startsWith("MARK_READ:")) {
+            handleMarkEmail(command, true, out);
+        } else if (command.startsWith("MARK_UNREAD:")) {
+            handleMarkEmail(command, false, out);
+        } else {
+            handleEmailConnection(command, out);
+        }
     }
 
     private void handleLogin(String credentials, ObjectInputStream in, ObjectOutputStream out) throws IOException {
@@ -198,7 +187,40 @@ public class EmailServer {
         User newUser = new User(name, email, password);
         users.put(newUser.getId(), newUser);
         emailToId.put(email, newUser.getId());
+        initializeUserFolders(email);
         out.writeObject("REGISTER_SUCCESS");
+        out.flush();
+    }
+
+    private void handleMoveEmail(String emailData, ObjectOutputStream out) throws IOException {
+        String[] parts = emailData.split(":");
+        String userEmail = parts[1];
+        int emailIndex = Integer.parseInt(parts[2]);
+        String targetFolder = parts[3];
+
+        Map<String, Folder> folders = userFolders.get(userEmail);
+        if (folders != null) {
+            Email emailToMove = null;
+            Folder sourceFolder = null;
+            for (Folder folder : folders.values()) {
+                List<Email> emails = folder.getEmails();
+                if (emailIndex < emails.size()) {
+                    emailToMove = emails.get(emailIndex);
+                    sourceFolder = folder;
+                    break;
+                }
+            }
+
+            if (emailToMove != null && sourceFolder != null && folders.containsKey(targetFolder)) {
+                sourceFolder.removeEmail(emailToMove);
+                folders.get(targetFolder).addEmail(emailToMove);
+                out.writeObject("MOVE_SUCCESS");
+            } else {
+                out.writeObject("MOVE_FAILED:Invalid email or folder");
+            }
+        } else {
+            out.writeObject("MOVE_FAILED:User not found");
+        }
         out.flush();
     }
 
@@ -207,13 +229,19 @@ public class EmailServer {
         String userEmail = parts[1];
         int emailIndex = Integer.parseInt(parts[2]);
 
-        List<Email> userEmails = mailboxes.get(userEmail);
-        if (userEmails != null && emailIndex >= 0 && emailIndex < userEmails.size()) {
-            userEmails.remove(emailIndex);
-            out.writeObject("DELETE_SUCCESS");
-        } else {
-            out.writeObject("DELETE_FAILED:Invalid email index");
+        Map<String, Folder> folders = userFolders.get(userEmail);
+        if (folders != null) {
+            for (Folder folder : folders.values()) {
+                List<Email> emails = folder.getEmails();
+                if (emailIndex < emails.size()) {
+                    folder.removeEmail(emails.get(emailIndex));
+                    out.writeObject("DELETE_SUCCESS");
+                    out.flush();
+                    return;
+                }
+            }
         }
+        out.writeObject("DELETE_FAILED:Invalid email index");
         out.flush();
     }
 
@@ -222,51 +250,76 @@ public class EmailServer {
         String userEmail = parts[1];
         int emailIndex = Integer.parseInt(parts[2]);
 
-        List<Email> userEmails = mailboxes.get(userEmail);
-        if (userEmails != null && emailIndex >= 0 && emailIndex < userEmails.size()) {
-            userEmails.get(emailIndex).setRead(markAsRead);
-            out.writeObject("MARK_SUCCESS");
-        } else {
-            out.writeObject("MARK_FAILED:Invalid email index");
+        Map<String, Folder> folders = userFolders.get(userEmail);
+        if (folders != null) {
+            for (Folder folder : folders.values()) {
+                List<Email> emails = folder.getEmails();
+                if (emailIndex < emails.size()) {
+                    emails.get(emailIndex).setRead(markAsRead);
+                    out.writeObject("MARK_SUCCESS");
+                    out.flush();
+                    return;
+                }
+            }
         }
+        out.writeObject("MARK_FAILED:Invalid email index");
         out.flush();
+    }
+
+    private void handleEmailConnection(String email, ObjectOutputStream out) throws IOException {
+        Integer userId = emailToId.get(email);
+        if (userId != null && users.containsKey(userId)) {
+            out.writeObject("CONNECTED");
+            out.flush();
+            
+            clientOutputStreams.put(email, out);
+            
+            if (!userFolders.containsKey(email)) {
+                initializeUserFolders(email);
+            }
+            
+            Map<String, Folder> folders = userFolders.get(email);
+            for (Folder folder : folders.values()) {
+                for (Email storedEmail : folder.getEmails()) {
+                    out.writeObject(storedEmail);
+                    out.flush();
+                }
+            }
+        } else {
+            out.writeObject("CONNECTION_FAILED:User not found");
+            out.flush();
+        }
     }
 
     public void deliverEmail(Email email) {
         if (!isServerMode) return;
         
-        // Store email in recipient's mailbox
-        mailboxes.computeIfAbsent(email.getTo(), k -> new ArrayList<>()).add(email);
+        String recipientEmail = email.getTo();
+        Map<String, Folder> recipientFolders = userFolders.get(recipientEmail);
+        
+        if (recipientFolders != null) {
+            recipientFolders.get("inbox").addEmail(email);
 
-        // If recipient is connected, notify them
-        ObjectOutputStream recipientStream = clientOutputStreams.get(email.getTo());
-        if (recipientStream != null) {
-            try {
-                recipientStream.writeObject(email);
-                recipientStream.flush();
-                System.out.println("Email delivered to " + email.getTo());
-            } catch (IOException e) {
-                System.out.println("Failed to deliver email to " + email.getTo() + ": " + e.getMessage());
-                // Remove disconnected user
-                clientOutputStreams.remove(email.getTo());
+            ObjectOutputStream recipientStream = clientOutputStreams.get(recipientEmail);
+            if (recipientStream != null) {
+                try {
+                    recipientStream.writeObject(email);
+                    recipientStream.flush();
+                    System.out.println("Email delivered to " + recipientEmail);
+                } catch (IOException e) {
+                    System.out.println("Failed to deliver email to " + recipientEmail + ": " + e.getMessage());
+                    clientOutputStreams.remove(recipientEmail);
+                }
+            } else {
+                System.out.println("Email stored for offline user " + recipientEmail);
             }
-        } else {
-            System.out.println("Email stored for offline user " + email.getTo());
         }
-    }
-
-    public List<Email> getInbox(String userEmail) {
-        if (!isServerMode) {
-            return new ArrayList<>();
-        }
-        return mailboxes.getOrDefault(userEmail, new ArrayList<>());
     }
 
     public void stop() {
         if (!isServerMode) return;
         
         running = false;
-        // Close all client streams
         for (ObjectOutputStream out : clientOutputStreams.values()) {
             try {
                 out.close();
