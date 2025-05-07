@@ -1,12 +1,15 @@
 import java.util.List;
 
 public class User {
+    private final int id;
     private String name;
     private final String email;
     private String password;
     private EmailClient emailClient;
+    private static int idCounter = 0;
 
     public User(String name, String email, String password) {
+        this.id = idCounter++;
         this.name = name;
         this.password = password;
 
@@ -27,6 +30,10 @@ public class User {
 
     public String getPassword() {
         return password;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public void setName(String name) {

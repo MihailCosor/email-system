@@ -23,20 +23,31 @@ public class EmailClient {
             out.flush();
             in = new ObjectInputStream(socket.getInputStream());
 
+            // Clear inbox when connecting
+            inbox.clear();
+            this.userEmail = email;
+
             // Send email to identify this client
             out.writeObject(email);
             out.flush();
 
             // Wait for connection confirmation
-            String response = (String) in.readObject();
-            if (response.equals("CONNECTED")) {
-                this.userEmail = email;
-                this.connected = true;
-                startInboxListener();
-                return true;
+            Object response = in.readObject();
+            if (response instanceof String) {
+                String responseStr = (String) response;
+                if (responseStr.equals("CONNECTED")) {
+                    this.connected = true;
+                    startInboxListener();
+                    return true;
+                } else if (responseStr.startsWith("CONNECTION_FAILED:")) {
+                    System.out.println(responseStr.substring("CONNECTION_FAILED:".length()));
+                    disconnect();
+                    return false;
+                }
             }
         } catch (Exception e) {
             System.out.println("Failed to connect: " + e.getMessage());
+            disconnect();
         }
         return false;
     }
@@ -49,7 +60,7 @@ public class EmailClient {
                     if (obj instanceof Email) {
                         Email email = (Email) obj;
                         inbox.add(email);
-                        System.out.println("\nNew email received from " + email.getFrom());
+                        // System.out.println("\nNew email received from " + email.getFrom());
                     }
                 } catch (EOFException | SocketException e) {
                     // Server disconnected

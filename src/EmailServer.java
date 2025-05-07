@@ -12,12 +12,14 @@ public class EmailServer {
     private Map<String, ObjectOutputStream> clientOutputStreams;
     private ExecutorService executorService;
     private boolean isServerMode;
-    private Map<String, User> users; // Store users on server
+    private Map<Integer, User> users;
+    private Map<String, Integer> emailToId;
 
     private EmailServer(boolean isServerMode) {
         this.isServerMode = isServerMode;
         this.mailboxes = new ConcurrentHashMap<>();
         this.users = new ConcurrentHashMap<>();
+        this.emailToId = new ConcurrentHashMap<>();     
         if (isServerMode) {
             this.clientOutputStreams = new ConcurrentHashMap<>();
             this.executorService = Executors.newCachedThreadPool();
@@ -26,9 +28,17 @@ public class EmailServer {
     }
 
     private void initializeDummyUsers() {
-        // Add some dummy users
-        users.put("john@example.com", new User("John Doe", "john@example.com", "password123"));
-        users.put("jane@example.com", new User("Jane Smith", "jane@example.com", "password456"));
+        // Add some dummy users for mails admin@mihail.ro and test@mihail.ro
+        User admin = new User("Admin", "admin@mihail.ro", "admin");
+        User test = new User("Test", "test@mihail.ro", "test");
+        
+        // Store users by ID
+        users.put(admin.getId(), admin);
+        users.put(test.getId(), test);
+        
+        // Create email to ID mapping
+        emailToId.put(admin.getEmail(), admin.getId());
+        emailToId.put(test.getEmail(), test.getId());
     }
 
     public static EmailServer getInstance() {
@@ -90,9 +100,26 @@ public class EmailServer {
                                 handleRegister(command.substring(9), in, out);
                             } else {
                                 // Handle email connection
-                                clientOutputStreams.put(command, out);
-                                out.writeObject("CONNECTED");
-                                out.flush();
+                                String email = command;
+                                Integer userId = emailToId.get(email);
+                                if (userId != null && users.containsKey(userId)) {
+                                    // First send connection confirmation
+                                    out.writeObject("CONNECTED");
+                                    out.flush();
+                                    
+                                    // Then store the client's output stream
+                                    clientOutputStreams.put(email, out);
+                                    
+                                    // Finally send any stored emails
+                                    List<Email> storedEmails = mailboxes.getOrDefault(email, new ArrayList<>());
+                                    for (Email storedEmail : storedEmails) {
+                                        out.writeObject(storedEmail);
+                                        out.flush();
+                                    }
+                                } else {
+                                    out.writeObject("CONNECTION_FAILED:User not found");
+                                    out.flush();
+                                }
                             }
                         } else if (obj instanceof Email) {
                             Email email = (Email) obj;
@@ -119,7 +146,14 @@ public class EmailServer {
         String email = parts[0];
         String password = parts[1];
 
-        User user = users.get(email);
+        Integer userId = emailToId.get(email);
+        if (userId == null) {
+            out.writeObject("LOGIN_FAILED:Invalid email or password");
+            out.flush();
+            return;
+        }
+
+        User user = users.get(userId);
         if (user != null && user.getPassword().equals(password)) {
             out.writeObject("LOGIN_SUCCESS:" + user.getName());
             out.flush();
@@ -135,14 +169,15 @@ public class EmailServer {
         String email = parts[1];
         String password = parts[2];
 
-        if (users.containsKey(email)) {
+        if (emailToId.containsKey(email)) {
             out.writeObject("REGISTER_FAILED:Email already exists");
             out.flush();
             return;
         }
 
         User newUser = new User(name, email, password);
-        users.put(email, newUser);
+        users.put(newUser.getId(), newUser);
+        emailToId.put(email, newUser.getId());
         out.writeObject("REGISTER_SUCCESS");
         out.flush();
     }
@@ -166,12 +201,11 @@ public class EmailServer {
                 clientOutputStreams.remove(email.getTo());
             }
         } else {
-            System.out.println("Recipient " + email.getTo() + " is not currently connected");
+            System.out.println("Email stored for offline user " + email.getTo());
         }
     }
 
     public List<Email> getInbox(String userEmail) {
-        // For client mode, return an empty list since emails are handled by EmailClient
         if (!isServerMode) {
             return new ArrayList<>();
         }

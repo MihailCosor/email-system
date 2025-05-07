@@ -22,6 +22,9 @@ public class Main {
                     break;
                 }
             }
+
+            // Stop server
+            server.stop();
         } else if (choice.equals("2")) {
             // Start client only
             Menu menu = new Menu();
@@ -29,5 +32,7 @@ public class Main {
         } else {
             System.out.println("Invalid choice!");
         }
+
+        scanner.close();
     }
 }
