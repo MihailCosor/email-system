@@ -2,7 +2,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-public class DateTime implements Serializable {
+public class DateTime implements Serializable, Comparable<DateTime> {
     private LocalDateTime dateTime;
     private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private static final DateTimeFormatter SHORT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
@@ -16,7 +16,7 @@ public class DateTime implements Serializable {
     }
 
     public static DateTime now() {
-        return new DateTime(LocalDateTime.now());
+        return new DateTime();
     }
 
     public String getFormattedDateTime() {
@@ -32,7 +32,12 @@ public class DateTime implements Serializable {
     }
 
     @Override
+    public int compareTo(DateTime other) {
+        return this.dateTime.compareTo(other.dateTime);
+    }
+
+    @Override
     public String toString() {
-        return getFormattedDateTime();
+        return dateTime.toString();
     }
 } 

@@ -267,7 +267,7 @@ public class Menu {
     private void handleFolderView(String folderName) {
         while (true) {
             List<Email> emails = folderName.equals("inbox") ? 
-                emailClient.getInbox() : emailClient.getSpam();
+                emailClient.getSortedInbox() : emailClient.getSortedSpam();
             
             System.out.println("\n=== " + folderName.toUpperCase() + " ===");
             if (!emails.isEmpty()) {

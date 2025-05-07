@@ -3,6 +3,10 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.TreeSet;
+import java.util.Comparator;
+import java.util.List;
+import java.util.ArrayList;
 
 public class EmailClient {
     private Socket socket;
@@ -236,5 +240,27 @@ public class EmailClient {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public List<Email> getSortedInbox() {
+        TreeSet<Email> sortedEmails = new TreeSet<>(new Comparator<Email>() {
+            @Override
+            public int compare(Email e1, Email e2) {
+                return e2.getTimestamp().compareTo(e1.getTimestamp()); // descending order
+            }
+        });
+        sortedEmails.addAll(getInbox());
+        return new ArrayList<>(sortedEmails);
+    }
+
+    public List<Email> getSortedSpam() {
+        TreeSet<Email> sortedEmails = new TreeSet<>(new Comparator<Email>() {
+            @Override
+            public int compare(Email e1, Email e2) {
+                return e2.getTimestamp().compareTo(e1.getTimestamp()); // descending order
+            }
+        });
+        sortedEmails.addAll(getSpam());
+        return new ArrayList<>(sortedEmails);
     }
 } 
