@@ -11,8 +11,8 @@ public class Main {
 
         if (choice.equals("1")) {
             // Start server only
-            EmailServer emailServer = EmailServer.getInstance(true);
-            emailServer.start();
+            EmailServer server = EmailServer.getInstance();
+            server.start();
             System.out.println("Server is running. Press Ctrl+C to stop.");
             // Keep server running
             while (true) {
@@ -23,19 +23,9 @@ public class Main {
                 }
             }
         } else if (choice.equals("2")) {
-            // Initialize client-only mode
-            EmailServer emailServer = EmailServer.getInstance(false);
-            Menu.setEmailServer(emailServer);
-            
-            // Initialize authentication
-            Auth auth = Auth.getInstance();
-            Menu.setAuthInstance(auth);
-
-            // add some dummy users
-            auth.register("Mihail", "admin@mihail.ro", "123");
-            auth.register("John", "john@mihail.ro", "123");
-
-            Menu.welcomeScreen();
+            // Start client only
+            Menu menu = new Menu();
+            menu.showMainMenu();
         } else {
             System.out.println("Invalid choice!");
         }

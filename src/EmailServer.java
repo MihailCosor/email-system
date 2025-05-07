@@ -12,14 +12,23 @@ public class EmailServer {
     private Map<String, ObjectOutputStream> clientOutputStreams;
     private ExecutorService executorService;
     private boolean isServerMode;
+    private Map<String, User> users; // Store users on server
 
     private EmailServer(boolean isServerMode) {
         this.isServerMode = isServerMode;
         this.mailboxes = new ConcurrentHashMap<>();
+        this.users = new ConcurrentHashMap<>();
         if (isServerMode) {
             this.clientOutputStreams = new ConcurrentHashMap<>();
             this.executorService = Executors.newCachedThreadPool();
+            initializeDummyUsers();
         }
+    }
+
+    private void initializeDummyUsers() {
+        // Add some dummy users
+        users.put("john@example.com", new User("John Doe", "john@example.com", "password123"));
+        users.put("jane@example.com", new User("Jane Smith", "jane@example.com", "password456"));
     }
 
     public static EmailServer getInstance() {
@@ -66,27 +75,30 @@ public class EmailServer {
         
         executorService.submit(() -> {
             try {
-                // First create output stream
                 ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
-                out.flush(); // Important: flush the header
-                // Then create input stream
+                out.flush();
                 ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
 
                 while (running) {
                     try {
                         Object obj = in.readObject();
                         if (obj instanceof String) {
-                            String email = (String) obj;
-                            clientOutputStreams.put(email, out);
-                            // Send confirmation
-                            out.writeObject("CONNECTED");
-                            out.flush();
+                            String command = (String) obj;
+                            if (command.startsWith("LOGIN:")) {
+                                handleLogin(command.substring(6), in, out);
+                            } else if (command.startsWith("REGISTER:")) {
+                                handleRegister(command.substring(9), in, out);
+                            } else {
+                                // Handle email connection
+                                clientOutputStreams.put(command, out);
+                                out.writeObject("CONNECTED");
+                                out.flush();
+                            }
                         } else if (obj instanceof Email) {
                             Email email = (Email) obj;
                             deliverEmail(email);
                         }
                     } catch (EOFException | SocketException e) {
-                        // Client disconnected
                         break;
                     }
                 }
@@ -100,6 +112,39 @@ public class EmailServer {
                 }
             }
         });
+    }
+
+    private void handleLogin(String credentials, ObjectInputStream in, ObjectOutputStream out) throws IOException {
+        String[] parts = credentials.split(":");
+        String email = parts[0];
+        String password = parts[1];
+
+        User user = users.get(email);
+        if (user != null && user.getPassword().equals(password)) {
+            out.writeObject("LOGIN_SUCCESS:" + user.getName());
+            out.flush();
+        } else {
+            out.writeObject("LOGIN_FAILED:Invalid email or password");
+            out.flush();
+        }
+    }
+
+    private void handleRegister(String userData, ObjectInputStream in, ObjectOutputStream out) throws IOException {
+        String[] parts = userData.split(":");
+        String name = parts[0];
+        String email = parts[1];
+        String password = parts[2];
+
+        if (users.containsKey(email)) {
+            out.writeObject("REGISTER_FAILED:Email already exists");
+            out.flush();
+            return;
+        }
+
+        User newUser = new User(name, email, password);
+        users.put(email, newUser);
+        out.writeObject("REGISTER_SUCCESS");
+        out.flush();
     }
 
     public void deliverEmail(Email email) {

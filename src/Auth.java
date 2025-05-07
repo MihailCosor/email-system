@@ -1,15 +1,30 @@
+import java.io.*;
+import java.net.*;
 import java.util.ArrayList;
 
 public class Auth {
     private static Auth instance;
     private User user;
     private boolean isLoggedIn;
-    private static ArrayList<User> users = new ArrayList<>();
+    private Socket serverSocket;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
 
     private Auth() {
-        // Private constructor to prevent instantiation
         this.user = null;
         this.isLoggedIn = false;
+        connectToServer();
+    }
+
+    private void connectToServer() {
+        try {
+            serverSocket = new Socket("localhost", 12345);
+            out = new ObjectOutputStream(serverSocket.getOutputStream());
+            out.flush();
+            in = new ObjectInputStream(serverSocket.getInputStream());
+        } catch (IOException e) {
+            System.out.println("Failed to connect to server: " + e.getMessage());
+        }
     }
 
     public static Auth getInstance() {
@@ -38,36 +53,53 @@ public class Auth {
     }
 
     public boolean login(String email, String password) {
-        for (User u : users) {
-            if (u.getEmail().equals(email) && u.getPassword().equals(password)) {
-                this.user = u;
+        try {
+            out.writeObject("LOGIN:" + email + ":" + password);
+            out.flush();
+            
+            String response = (String) in.readObject();
+            if (response.startsWith("LOGIN_SUCCESS:")) {
+                String name = response.substring("LOGIN_SUCCESS:".length());
+                this.user = new User(name, email, password);
                 this.isLoggedIn = true;
                 System.out.println("Login successful!");
                 return true;
+            } else {
+                System.out.println(response.substring("LOGIN_FAILED:".length()));
+                return false;
             }
-        }
-        System.out.println("Invalid email or password.");
-        return false;
-    }
-
-    public boolean register(String name, String email, String password) {
-        User newUser = new User(name, email, password);
-        if(!emailExists(email)) {
-            users.add(newUser);
-            System.out.println("Registration successful!");
-            return true;
-        } else {
-            System.out.println("Email already exists.");
+        } catch (Exception e) {
+            System.out.println("Error during login: " + e.getMessage());
             return false;
         }
     }
 
-    public boolean emailExists(String email) {
-        for (User u : users) {
-            if (u.getEmail().equals(email)) {
+    public boolean register(String name, String email, String password) {
+        try {
+            out.writeObject("REGISTER:" + name + ":" + email + ":" + password);
+            out.flush();
+            
+            String response = (String) in.readObject();
+            if (response.equals("REGISTER_SUCCESS")) {
+                System.out.println("Registration successful!");
                 return true;
+            } else {
+                System.out.println(response.substring("REGISTER_FAILED:".length()));
+                return false;
             }
+        } catch (Exception e) {
+            System.out.println("Error during registration: " + e.getMessage());
+            return false;
         }
-        return false;
+    }
+
+    public void close() {
+        try {
+            if (out != null) out.close();
+            if (in != null) in.close();
+            if (serverSocket != null) serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -11,10 +11,10 @@ public class User {
         this.password = password;
 
         if (!isValidEmail(email)) {
-            throw new IllegalArgumentException("Invalid email format. Email must end with '@mihail.ro'");
+            throw new IllegalArgumentException("Invalid email format. Email must end with '@mihail.ro' or '@example.com'");
         }
         this.email = email;
-        this.emailClient = new EmailClient(email);
+        this.emailClient = new EmailClient();
     }
 
     public String getName() {
@@ -38,11 +38,11 @@ public class User {
     }
 
     private boolean isValidEmail(String email) {
-        return email.endsWith("@mihail.ro");
+        return email.endsWith("@mihail.ro") || email.endsWith("@example.com");
     }
 
     public void connectToEmailServer() {
-        emailClient.connect();
+        emailClient.connect(email);
     }
 
     public void disconnectFromEmailServer() {
@@ -50,15 +50,10 @@ public class User {
     }
 
     public void sendEmail(String to, String subject, String content) {
-        Email email = new Email(this.email, to, subject, content);
-        emailClient.sendEmail(email);
+        emailClient.sendEmail(to, subject, content);
     }
 
     public List<Email> getInbox() {
         return emailClient.getInbox();
-    }
-
-    public void markEmailAsRead(Email email) {
-        emailClient.markAsRead(email);
     }
 }
