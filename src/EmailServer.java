@@ -3,18 +3,30 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 
+// singleton server class handling email operations and user management
 public class EmailServer {
+    // singleton instance
     private static EmailServer instance;
+    // server socket for accepting client connections
     private ServerSocket serverSocket;
+    // port number for server socket
     private final int PORT = 12345;
+    // flag indicating if server is running
     private boolean running;
-    private Map<String, Map<String, Folder>> userFolders; // email -> folder map
+    // maps user emails to their folder structure
+    private Map<String, Map<String, Folder>> userFolders;
+    // maps connected clients to their output streams
     private Map<String, ObjectOutputStream> clientOutputStreams;
+    // thread pool for handling client connections
     private ExecutorService executorService;
+    // indicates if running in server or client mode
     private boolean isServerMode;
+    // maps user ids to user objects
     private Map<Integer, User> users;
+    // maps email addresses to user ids
     private Map<String, Integer> emailToId;
 
+    // private constructor for singleton pattern
     private EmailServer(boolean isServerMode) {
         this.isServerMode = isServerMode;
         this.userFolders = new ConcurrentHashMap<>();
@@ -27,6 +39,7 @@ public class EmailServer {
         }
     }
 
+    // creates test users for development/testing
     private void initializeDummyUsers() {
         User admin = new User("Admin", "admin@mihail.ro", "admin");
         User test = new User("Test", "test@mihail.ro", "test");
@@ -40,14 +53,17 @@ public class EmailServer {
         initializeUserFolders(admin.getEmail());
         initializeUserFolders(test.getEmail());
 
+        // add test emails to admin's inbox
         Folder adminInbox = userFolders.get(admin.getEmail()).get("inbox");
         adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email", "This is a test email"));
         adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email 2", "This is a test email 2"));
         
+        // set up test contacts
         users.get(admin.getId()).addContact("Test", "test@mihail.ro");
         users.get(test.getId()).addContact("Admin", "admin@mihail.ro");
     }
 
+    // creates default folders for a new user
     private void initializeUserFolders(String email) {
         Map<String, Folder> folders = new HashMap<>();
         folders.put("inbox", new Folder("inbox", true));
@@ -55,10 +71,12 @@ public class EmailServer {
         userFolders.put(email, folders);
     }
 
+    // returns singleton instance in server mode
     public static EmailServer getInstance() {
         return getInstance(true);
     }
 
+    // returns singleton instance with specified mode
     public static EmailServer getInstance(boolean isServerMode) {
         if (instance == null) {
             instance = new EmailServer(isServerMode);
@@ -66,6 +84,7 @@ public class EmailServer {
         return instance;
     }
 
+    // starts the email server
     public void start() {
         if (!isServerMode) return;
         
@@ -74,6 +93,7 @@ public class EmailServer {
             running = true;
             System.out.println("Email server started on port " + PORT);
 
+            // accept client connections in separate thread
             new Thread(() -> {
                 while (running) {
                     try {
@@ -93,6 +113,7 @@ public class EmailServer {
         }
     }
 
+    // handles new client connection in separate thread
     private void handleNewConnection(Socket clientSocket) {
         if (!isServerMode) return;
         
@@ -112,7 +133,7 @@ public class EmailServer {
                             } else if (command.startsWith("REGISTER:")) {
                                 handleRegister(command.substring(9), in, out);
                             } else if (command.startsWith("SEND_EMAIL:")) {
-                                // just skip as we don't need to send anything back
+                                // skip acknowledgment for email sending
                             } else {
                                 handleCommand(command, out);
                             }
@@ -121,7 +142,7 @@ public class EmailServer {
                             deliverEmail(email);
                         }
                     } catch (EOFException | SocketException e) {
-                        break;
+                        break;  // client disconnected
                     }
                 }
             } catch (Exception e) {
@@ -136,6 +157,7 @@ public class EmailServer {
         });
     }
 
+    // routes commands to appropriate handlers
     private void handleCommand(String command, ObjectOutputStream out) throws IOException {
         if (command.startsWith("MOVE_EMAIL:")) {
             handleMoveEmail(command, out);
@@ -150,6 +172,7 @@ public class EmailServer {
         }
     }
 
+    // authenticates user login attempt
     private void handleLogin(String credentials, ObjectInputStream in, ObjectOutputStream out) throws IOException {
         String[] parts = credentials.split(":");
         String email = parts[0];
@@ -172,6 +195,7 @@ public class EmailServer {
         }
     }
 
+    // registers a new user
     private void handleRegister(String userData, ObjectInputStream in, ObjectOutputStream out) throws IOException {
         String[] parts = userData.split(":");
         String name = parts[0];
@@ -192,6 +216,7 @@ public class EmailServer {
         out.flush();
     }
 
+    // moves an email between folders
     private void handleMoveEmail(String emailData, ObjectOutputStream out) throws IOException {
         String[] parts = emailData.split(":");
         String userEmail = parts[1];
@@ -224,6 +249,7 @@ public class EmailServer {
         out.flush();
     }
 
+    // deletes an email from a folder
     private void handleDeleteEmail(String emailData, ObjectOutputStream out) throws IOException {
         String[] parts = emailData.split(":");
         String userEmail = parts[1];
@@ -245,6 +271,7 @@ public class EmailServer {
         out.flush();
     }
 
+    // marks an email as read or unread
     private void handleMarkEmail(String emailData, boolean markAsRead, ObjectOutputStream out) throws IOException {
         String[] parts = emailData.split(":");
         String userEmail = parts[1];
@@ -266,106 +293,72 @@ public class EmailServer {
         out.flush();
     }
 
+    // handles client connection to email server
     private void handleEmailConnection(String email, ObjectOutputStream out) throws IOException {
-        Integer userId = emailToId.get(email);
-        if (userId != null && users.containsKey(userId)) {
-            out.writeObject("CONNECTED");
-            out.flush();
-            
+        if (userFolders.containsKey(email)) {
             clientOutputStreams.put(email, out);
-            
-            if (!userFolders.containsKey(email)) {
-                initializeUserFolders(email);
-            }
-            
-            Map<String, Folder> folders = userFolders.get(email);
-            for (Folder folder : folders.values()) {
-                for (Email storedEmail : folder.getEmails()) {
-                    out.writeObject(storedEmail);
-                    out.flush();
-                }
-            }
+            out.writeObject("CONNECT_SUCCESS");
         } else {
-            out.writeObject("CONNECTION_FAILED:User not found");
-            out.flush();
+            out.writeObject("CONNECT_FAILED:User not found");
         }
+        out.flush();
     }
 
+    // delivers an email to recipient's inbox
     public void deliverEmail(Email email) {
-        if (!isServerMode) return;
-        
-        String recipientEmail = email.getTo();
-        Map<String, Folder> recipientFolders = userFolders.get(recipientEmail);
+        String recipient = email.getTo();
+        Map<String, Folder> recipientFolders = userFolders.get(recipient);
         
         if (recipientFolders != null) {
-            recipientFolders.get("inbox").addEmail(email);
-
-            ObjectOutputStream recipientStream = clientOutputStreams.get(recipientEmail);
-            if (recipientStream != null) {
-                try {
-                    recipientStream.writeObject(email);
-                    recipientStream.flush();
-                    System.out.println("Email delivered to " + recipientEmail);
-                } catch (IOException e) {
-                    System.out.println("Failed to deliver email to " + recipientEmail + ": " + e.getMessage());
-                    clientOutputStreams.remove(recipientEmail);
-                }
-            } else {
-                System.out.println("Email stored for offline user " + recipientEmail);
-            }
-            
-            // Send success response back to sender
-            ObjectOutputStream senderStream = clientOutputStreams.get(email.getFrom());
-            if (senderStream != null) {
-                try {
-                    senderStream.writeObject("SEND_SUCCESS");
-                    senderStream.flush();
-                } catch (IOException e) {
-                    System.out.println("Failed to send success response to " + email.getFrom());
-                    clientOutputStreams.remove(email.getFrom());
-                }
-            }
-        } else {
-            // Send failure response back to sender
-            ObjectOutputStream senderStream = clientOutputStreams.get(email.getFrom());
-            if (senderStream != null) {
-                try {
-                    senderStream.writeObject("SEND_FAILED:Recipient not found");
-                    senderStream.flush();
-                } catch (IOException e) {
-                    System.out.println("Failed to send failure response to " + email.getFrom());
-                    clientOutputStreams.remove(email.getFrom());
+            Folder inbox = recipientFolders.get("inbox");
+            if (inbox != null) {
+                inbox.addEmail(email);
+                
+                // notify recipient if they are connected
+                ObjectOutputStream recipientOut = clientOutputStreams.get(recipient);
+                if (recipientOut != null) {
+                    try {
+                        recipientOut.writeObject("NEW_EMAIL");
+                        recipientOut.writeObject(email);
+                        recipientOut.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        clientOutputStreams.remove(recipient);
+                    }
                 }
             }
         }
     }
 
+    // stops the server and cleans up resources
     public void stop() {
         if (!isServerMode) return;
         
         running = false;
-        for (ObjectOutputStream out : clientOutputStreams.values()) {
-            try {
-                out.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        clientOutputStreams.clear();
-
         try {
-            if (serverSocket != null && !serverSocket.isClosed()) {
+            if (serverSocket != null) {
                 serverSocket.close();
             }
+            if (executorService != null) {
+                executorService.shutdown();
+                try {
+                    if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                        executorService.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    executorService.shutdownNow();
+                }
+            }
+            for (ObjectOutputStream out : clientOutputStreams.values()) {
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            clientOutputStreams.clear();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-
-        executorService.shutdownNow();
-        try {
-            executorService.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
     }
 } 

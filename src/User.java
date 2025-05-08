@@ -4,12 +4,18 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 
+// represents a user of the email system with authentication and contact management
 public class User extends Person {
+    // hashed password for authentication
     private String password;
+    // timestamp of the user's most recent login
     private DateTime lastLogin;
+    // non-serializable email client instance for server communication
     private transient EmailClient emailClient;
+    // set of user's contacts for quick lookup
     private Set<Contact> contacts;
 
+    // creates a new user with basic information and validates email format
     public User(String name, String email, String password) {
         super(name, email);
         this.password = password;
@@ -22,31 +28,37 @@ public class User extends Person {
         }
     }
 
+    // initializes a new email client instance
     private void initializeEmailClient() {
         this.emailClient = new EmailClient();
     }
 
-    // Called after deserialization
+    // custom deserialization to reinitialize transient email client
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
         in.defaultReadObject();
         initializeEmailClient();
     }
 
+    // basic getters
     public String getPassword() { return password; }
     public DateTime getLastLogin() { return lastLogin; }
     public EmailClient getEmailClient() { return emailClient; }
 
+    // basic setters
     public void setPassword(String password) { this.password = password; }
     public void setLastLogin(DateTime lastLogin) { this.lastLogin = lastLogin; }
 
+    // updates the last login time to current time
     public void updateLastLogin() {
         this.lastLogin = DateTime.now();
     }
 
+    // validates email domain against allowed list
     private boolean isValidEmail(String email) {
         return email != null && (email.endsWith("@mihail.ro") || email.endsWith("@example.com"));
     }
 
+    // email server connection management
     public void connectToEmailServer() {
         emailClient.connect(email);
     }
@@ -55,6 +67,7 @@ public class User extends Person {
         emailClient.disconnect();
     }
 
+    // email operations
     public void sendEmail(String to, String subject, String content) {
         emailClient.sendEmail(to, subject, content);
     }
@@ -63,7 +76,7 @@ public class User extends Person {
         return emailClient.getInbox();
     }
 
-    // Contacts management
+    // contact management operations
     public boolean addContact(String name, String email) {
         return contacts.add(new Contact(name, email));
     }
@@ -76,14 +89,17 @@ public class User extends Person {
         return contacts.remove(contact);
     }
 
+    // returns a defensive copy of contacts set
     public Set<Contact> getContacts() {
         return new HashSet<>(contacts);
     }
 
+    // returns contacts as a list for ordered display
     public List<Contact> getContactsList() {
         return new ArrayList<>(contacts);
     }
 
+    // finds a contact by email address
     public Contact findContact(String email) {
         return contacts.stream()
                 .filter(contact -> contact.getEmail().equals(email))

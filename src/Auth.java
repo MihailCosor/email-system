@@ -1,18 +1,26 @@
 import java.io.*;
 import java.net.*;
 
+// singleton class handling user authentication and server communication
 public class Auth {
+    // singleton instance
     private static Auth instance;
+    // currently authenticated user
     private User currentUser;
+    // socket connection to authentication server
     private Socket serverSocket;
+    // output stream for sending requests to server
     private ObjectOutputStream out;
+    // input stream for receiving responses from server
     private ObjectInputStream in;
 
+    // private constructor for singleton pattern
     private Auth() {
         this.currentUser = null;
         connectToServer();
     }
 
+    // establishes connection to authentication server
     private void connectToServer() {
         try {
             serverSocket = new Socket("localhost", 12345);
@@ -24,6 +32,7 @@ public class Auth {
         }
     }
 
+    // returns singleton instance, creating it if necessary
     public static Auth getInstance() {
         if (instance == null) {
             instance = new Auth();
@@ -31,26 +40,25 @@ public class Auth {
         return instance;
     }
 
+    // checks if a user is currently logged in
     public boolean isLoggedIn() {
         return currentUser != null;
     }
 
+    // returns the currently authenticated user
     public User getCurrentUser() {
         return currentUser;
     }
 
+    // logs out current user and cleans up resources
     public void logout() {
-        currentUser = null;
-        try {
-            // if (out != null) out.close();
-            // if (in != null) in.close();
-            // if (serverSocket != null) serverSocket.close();
-        // } catch (IOException e) {
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (currentUser != null) {
+            currentUser.getEmailClient().disconnect();
+            currentUser = null;
         }
     }
 
+    // authenticates user with email and password
     public boolean login(String email, String password) {
         try {
             out.writeObject("LOGIN:" + email + ":" + password);
@@ -61,7 +69,7 @@ public class Auth {
                 currentUser = (User) in.readObject();
                 currentUser.updateLastLogin();
                 
-                // Connect to email server
+                // connect to email server after successful authentication
                 if (currentUser.getEmailClient().connect(email)) {
                     System.out.println("Login successful!");
                     return true;
@@ -80,6 +88,7 @@ public class Auth {
         }
     }
 
+    // registers a new user with the system
     public boolean register(String name, String email, String password) {
         try {
             out.writeObject("REGISTER:" + name + ":" + email + ":" + password);
@@ -99,14 +108,15 @@ public class Auth {
         }
     }
 
+    // closes all resources when shutting down
     public void close() {
         try {
-            // if (out != null) out.close();
-            // if (in != null) in.close();
-            // if (serverSocket != null) serverSocket.close();
-        // } catch (IOException e) {
-        } catch (Exception e) {
-            e.printStackTrace();
+            logout();
+            if (out != null) out.close();
+            if (in != null) in.close();
+            if (serverSocket != null) serverSocket.close();
+        } catch (IOException e) {
+            System.out.println("Error closing resources: " + e.getMessage());
         }
     }
 }
