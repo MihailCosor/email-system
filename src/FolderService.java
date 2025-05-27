@@ -61,6 +61,7 @@ public class FolderService extends GenericDatabaseService<Folder> {
             rs.getString("folder_name"),
             true  // isSystem is true for all folders in the database
         );
+        folder.setId(rs.getInt("id"));  // Set the folder ID from the database
         return folder;
     }
 }

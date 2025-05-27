@@ -1,6 +1,7 @@
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 
 public abstract class GenericDatabaseService<T> {
     private final DatabaseConnection dbConnection;
@@ -9,7 +10,7 @@ public abstract class GenericDatabaseService<T> {
         this.dbConnection = DatabaseConnection.getInstance();
     }
 
-    public void create(String tableName, String[] columns, Object[] values) throws SQLException {
+    public int create(String tableName, String[] columns, Object[] values) throws SQLException {
         System.out.println("Creating record in table: " + tableName);
         StringBuilder query = new StringBuilder("INSERT INTO " + tableName + " (");
         StringBuilder placeholders = new StringBuilder(") VALUES (");
@@ -25,14 +26,27 @@ public abstract class GenericDatabaseService<T> {
         placeholders.append(")");
         query.append(placeholders);
 
+        System.out.println("Full SQL query: " + query);
+        System.out.println("Values: " + Arrays.toString(values));
+
         try (Connection conn = dbConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query.toString())) {
-            System.out.println("Executing query: " + query);
+             PreparedStatement pstmt = conn.prepareStatement(query.toString(), Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < values.length; i++) {
                 pstmt.setObject(i + 1, values[i]);
             }
-            pstmt.executeUpdate();
+            int rowsAffected = pstmt.executeUpdate();
+            System.out.println("Rows affected: " + rowsAffected);
+            
+            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    int id = generatedKeys.getInt(1);
+                    System.out.println("Generated ID: " + id);
+                    return id;
+                }
+            }
         }
+        System.out.println("No ID was generated");
+        return -1;  // Return -1 if no ID was generated
     }
 
     public List<T> read(String tableName, String whereClause, Object[] params, ResultSetMapper<T> mapper) throws SQLException {

@@ -2,11 +2,14 @@ import java.util.Scanner;
 import java.util.List;
 import java.util.ArrayList;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 
 public class Menu {
     private Scanner scanner;
     private Auth auth;
     private EmailClient emailClient;
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = 
+        DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
     public Menu() {
         this.scanner = new Scanner(System.in);
@@ -278,7 +281,7 @@ public class Menu {
                         email.isRead() ? "READ" : "UNREAD",
                         email.getFrom(),
                         email.getSubject(),
-                        email.getTimestamp().getShortDateTime());
+                        email.getTimestamp().format(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm")));
                 }
             } else {
                 System.out.println("No emails in this folder.");
@@ -305,13 +308,13 @@ public class Menu {
                     viewFullEmailInFolder(emails);
                     break;
                 case 2:
-                    markEmailInFolder(emails, true);
+                    markEmailInFolder(emails, true, folderName);
                     break;
                 case 3:
-                    markEmailInFolder(emails, false);
+                    markEmailInFolder(emails, false, folderName);
                     break;
                 case 4:
-                    deleteEmailInFolder(emails);
+                    deleteEmailInFolder(emails, folderName);
                     break;
                 case 5:
                     moveEmailBetweenFolders(emails, folderName);
@@ -334,7 +337,7 @@ public class Menu {
             System.out.println("From: " + email.getFrom());
             System.out.println("To: " + email.getTo());
             System.out.println("Subject: " + email.getSubject());
-            System.out.println("Time: " + email.getTimestamp().getFormattedDateTime());
+            System.out.println("Time: " + email.getTimestamp().format(DATE_TIME_FORMATTER));
             System.out.println("Status: " + (email.isRead() ? "READ" : "UNREAD"));
             System.out.println("\nContent:");
             System.out.println("----------------------------------------");
@@ -349,7 +352,20 @@ public class Menu {
         }
     }
 
-    private void markEmailInFolder(List<Email> emails, boolean markAsRead) {
+    private void markEmailInFolder(List<Email> emails, boolean markAsRead, String folderName) {
+        // Display emails first
+        System.out.println("\n=== " + folderName.toUpperCase() + " ===");
+        for (int i = 0; i < emails.size(); i++) {
+            Email email = emails.get(i);
+            System.out.printf("%d. [%s] From: %s, Subject: %s, Time: %s%n",
+                i + 1,
+                email.isRead() ? "READ" : "UNREAD",
+                email.getFrom(),
+                email.getSubject(),
+                email.getTimestamp().format(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm")));
+        }
+        System.out.println("----------------------------------------");
+
         System.out.printf("\nEnter the number of the email to mark as %s (0 to cancel): ", 
             markAsRead ? "read" : "unread");
         int choice = getIntInput();
@@ -367,7 +383,20 @@ public class Menu {
         }
     }
 
-    private void deleteEmailInFolder(List<Email> emails) {
+    private void deleteEmailInFolder(List<Email> emails, String folderName) {
+        // Display emails first
+        System.out.println("\n=== " + folderName.toUpperCase() + " ===");
+        for (int i = 0; i < emails.size(); i++) {
+            Email email = emails.get(i);
+            System.out.printf("%d. [%s] From: %s, Subject: %s, Time: %s%n",
+                i + 1,
+                email.isRead() ? "READ" : "UNREAD",
+                email.getFrom(),
+                email.getSubject(),
+                email.getTimestamp().format(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm")));
+        }
+        System.out.println("----------------------------------------");
+
         System.out.print("\nEnter the number of the email to delete (0 to cancel): ");
         int choice = getIntInput();
 
@@ -380,6 +409,19 @@ public class Menu {
     }
 
     private void moveEmailBetweenFolders(List<Email> emails, String currentFolder) {
+        // Display emails first
+        System.out.println("\n=== " + currentFolder.toUpperCase() + " ===");
+        for (int i = 0; i < emails.size(); i++) {
+            Email email = emails.get(i);
+            System.out.printf("%d. [%s] From: %s, Subject: %s, Time: %s%n",
+                i + 1,
+                email.isRead() ? "READ" : "UNREAD",
+                email.getFrom(),
+                email.getSubject(),
+                email.getTimestamp().format(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm")));
+        }
+        System.out.println("----------------------------------------");
+
         System.out.print("\nEnter the number of the email to move (0 to cancel): ");
         int choice = getIntInput();
 
@@ -404,9 +446,8 @@ public class Menu {
             System.out.println("\n=== User Profile ===");
             System.out.println("Name: " + currentUser.getName());
             System.out.println("Email: " + currentUser.getEmail());
-            System.out.println("User ID: " + currentUser.getId());
             System.out.println("Account Status: Active");
-            System.out.println("Last Login: " + currentUser.getLastLogin().getFormattedDateTime());
+            System.out.println("Last Login: " + new DateTime(currentUser.getLastLogin()).getFormattedDateTime());
             System.out.println("----------------------------------------");
         } else {
             System.out.println("Error retrieving profile information.");

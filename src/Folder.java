@@ -4,6 +4,8 @@ import java.util.List;
 
 // represents an email folder that can contain multiple email messages
 public class Folder implements Serializable {
+    // unique identifier for the folder
+    private int id;
     // name of the folder (inbox, sent, trash, etc.)
     private String name;
     // list of emails contained in this folder
@@ -13,6 +15,7 @@ public class Folder implements Serializable {
 
     // default constructor
     public Folder() {
+        this.id = -1;
         this.name = "";
         this.emails = new ArrayList<>();
         this.isSystem = true;
@@ -20,9 +23,20 @@ public class Folder implements Serializable {
 
     // creates a new folder with specified name and system status
     public Folder(String name, boolean isSystem) {
+        this.id = -1;
         this.name = name.toLowerCase();  // normalize folder names to lowercase
         this.emails = new ArrayList<>();
         this.isSystem = isSystem;
+    }
+
+    // retrieves the folder id
+    public int getId() {
+        return id;
+    }
+
+    // sets the folder id
+    public void setId(int id) {
+        this.id = id;
     }
 
     // retrieves the folder name

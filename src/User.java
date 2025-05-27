@@ -1,4 +1,5 @@
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -9,7 +10,7 @@ public class User extends Person implements Serializable {
     // hashed password for authentication
     private String password;
     // timestamp of the user's most recent login
-    private DateTime lastLogin;
+    private LocalDateTime lastLogin;
     // non-serializable email client instance for server communication
     private transient EmailClient emailClient;
     // set of user's contacts for quick lookup
@@ -18,13 +19,15 @@ public class User extends Person implements Serializable {
     // default constructor
     public User() {
         super();
+        this.lastLogin = LocalDateTime.now();
+        this.contacts = new HashSet<>();
     }
 
     // creates a new user with basic information and validates email format
     public User(String name, String email, String password) {
         super(name, email);
         this.password = password;
-        this.lastLogin = DateTime.now();
+        this.lastLogin = LocalDateTime.now();
         this.contacts = new HashSet<>();
         initializeEmailClient();
 
@@ -46,16 +49,16 @@ public class User extends Person implements Serializable {
 
     // basic getters
     public String getPassword() { return password; }
-    public DateTime getLastLogin() { return lastLogin; }
+    public LocalDateTime getLastLogin() { return lastLogin; }
     public EmailClient getEmailClient() { return emailClient; }
 
     // basic setters
     public void setPassword(String password) { this.password = password; }
-    public void setLastLogin(DateTime lastLogin) { this.lastLogin = lastLogin; }
+    public void setLastLogin(LocalDateTime lastLogin) { this.lastLogin = lastLogin; }
 
     // updates the last login time to current time
     public void updateLastLogin() {
-        this.lastLogin = DateTime.now();
+        this.lastLogin = LocalDateTime.now();
     }
 
     // validates email domain against allowed list

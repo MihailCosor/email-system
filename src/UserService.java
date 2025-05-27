@@ -1,10 +1,15 @@
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class UserService extends GenericDatabaseService<User> {
     private static UserService instance;
     private static final String TABLE_NAME = "users";
+    private static final DateTimeFormatter DB_FORMATTER = 
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private UserService() {
         super();
@@ -46,6 +51,12 @@ public class UserService extends GenericDatabaseService<User> {
         update(TABLE_NAME, columns, values, "email = ?", new Object[]{user.getEmail()});
     }
 
+    public void updateLastLogin(User user) throws SQLException {
+        String[] columns = {"created_at"};
+        Object[] values = {LocalDateTime.now().format(DB_FORMATTER)};
+        update(TABLE_NAME, columns, values, "email = ?", new Object[]{user.getEmail()});
+    }
+
     public void deleteUser(String email) throws SQLException {
         delete(TABLE_NAME, "email = ?", new Object[]{email});
     }
@@ -61,6 +72,19 @@ public class UserService extends GenericDatabaseService<User> {
             rs.getString("email"),
             rs.getString("password")
         );
+        
+        // Set last login time if available
+        String createdAt = rs.getString("created_at");
+        if (createdAt != null) {
+            try {
+                LocalDateTime timestamp = LocalDateTime.parse(createdAt, DB_FORMATTER);
+                user.setLastLogin(timestamp);
+            } catch (Exception e) {
+                // If parsing fails, use current time
+                user.setLastLogin(LocalDateTime.now());
+            }
+        }
+        
         return user;
     }
 }

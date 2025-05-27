@@ -1,6 +1,7 @@
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class EmailService extends GenericDatabaseService<Email> {
@@ -18,7 +19,13 @@ public class EmailService extends GenericDatabaseService<Email> {
         return instance;
     }
 
-    public void createEmail(Email email, int folderId) throws SQLException {
+    public int createEmail(Email email, int folderId) throws SQLException {
+        System.out.println("Creating email in database:");
+        System.out.println("From: " + email.getFrom());
+        System.out.println("To: " + email.getTo());
+        System.out.println("Subject: " + email.getSubject());
+        System.out.println("Folder ID: " + folderId);
+        
         String[] columns = {"sender", "recipient", "subject", "content", "folder_id"};
         Object[] values = {
             email.getFrom(),
@@ -27,7 +34,9 @@ public class EmailService extends GenericDatabaseService<Email> {
             email.getContent(),
             folderId
         };
-        create(TABLE_NAME, columns, values);
+        int id = create(TABLE_NAME, columns, values);
+        System.out.println("Created email with ID: " + id);
+        return id;
     }
 
     public Email getEmailById(int emailId) throws SQLException {
@@ -71,10 +80,21 @@ public class EmailService extends GenericDatabaseService<Email> {
             rs.getString("subject"),
             rs.getString("content")
         );
+        email.setId(rs.getInt("id"));
         email.setRead(rs.getBoolean("is_read"));
-        Timestamp timestamp = rs.getTimestamp("timestamp");
-        if (timestamp != null) {
-            email.setTimestamp(timestamp.toLocalDateTime());
+        email.setFolderId(rs.getInt("folder_id"));
+        
+        // Handle SQLite timestamp format
+        String timestampStr = rs.getString("timestamp");
+        if (timestampStr != null) {
+            try {
+                // Parse SQLite's timestamp format (YYYY-MM-DD HH:MM:SS)
+                LocalDateTime timestamp = LocalDateTime.parse(timestampStr.replace(" ", "T"));
+                email.setTimestamp(timestamp);
+            } catch (Exception e) {
+                System.err.println("Error parsing timestamp: " + timestampStr);
+                email.setTimestamp(LocalDateTime.now());  // Fallback to current time
+            }
         }
         return email;
     }
