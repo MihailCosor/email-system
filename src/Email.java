@@ -2,11 +2,18 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 // represents an email message with read status and folder organization
-public class Email extends Message {
+public class Email extends Message implements Serializable {
     // tracks whether the email has been read by the recipient
     private boolean read;
     // current folder location of the email (inbox, sent, trash, etc.)
     private String folder;
+
+    // default constructor
+    public Email() {
+        super();
+        this.read = false;
+        this.folder = "inbox";
+    }
 
     // creates a new email with default unread status and inbox folder
     public Email(String from, String to, String subject, String content) {

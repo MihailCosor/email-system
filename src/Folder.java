@@ -11,6 +11,13 @@ public class Folder implements Serializable {
     // indicates if this is a system folder (inbox, spam) that cannot be deleted
     private boolean isSystem;
 
+    // default constructor
+    public Folder() {
+        this.name = "";
+        this.emails = new ArrayList<>();
+        this.isSystem = true;
+    }
+
     // creates a new folder with specified name and system status
     public Folder(String name, boolean isSystem) {
         this.name = name.toLowerCase();  // normalize folder names to lowercase

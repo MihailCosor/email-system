@@ -15,6 +15,11 @@ public class User extends Person implements Serializable {
     // set of user's contacts for quick lookup
     private Set<Contact> contacts;
 
+    // default constructor
+    public User() {
+        super();
+    }
+
     // creates a new user with basic information and validates email format
     public User(String name, String email, String password) {
         super(name, email);

@@ -63,7 +63,7 @@ public class Auth {
         try {
             out.writeObject("LOGIN:" + email + ":" + password);
             out.flush();
-            
+
             String response = (String) in.readObject();
             if (response.equals("LOGIN_SUCCESS")) {
                 currentUser = (User) in.readObject();

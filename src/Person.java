@@ -9,6 +9,11 @@ public abstract class Person {
     // email address used as username/identifier
     protected String email;
 
+    // default constructor
+    public Person() {
+        this.id = nextId++;
+    }
+
     // creates a new person with auto-generated id
     public Person(String name, String email) {
         this.id = nextId++;

@@ -22,23 +22,22 @@ public class EmailServer {
     private ExecutorService executorService;
     // indicates if running in server or client mode
     private boolean isServerMode;
-    // maps user ids to user objects
-    private Map<Integer, User> users;
-    // maps email addresses to user ids
-    private Map<String, Integer> emailToId;
+    // database services
+    private final UserService userService;
+    private final FolderService folderService;
 
     // private constructor for singleton pattern
     private EmailServer(boolean isServerMode) {
         this.isServerMode = isServerMode;
         this.userFolders = new ConcurrentHashMap<>();
-        this.users = new ConcurrentHashMap<>();
-        this.emailToId = new ConcurrentHashMap<>();     
+        this.userService = UserService.getInstance();
+        this.folderService = FolderService.getInstance();
+        
         if (isServerMode) {
             this.clientOutputStreams = new ConcurrentHashMap<>();
             this.executorService = Executors.newCachedThreadPool();
-//            initializeDummyUsers();
             // init database
-            try{
+            try {
                 DatabaseInit.initDB();
             } catch (SQLException e) {
                 System.out.println("Database initialization failed: " + e.getMessage());
@@ -48,7 +47,8 @@ public class EmailServer {
     }
 
     // creates default folders for a new user
-    private void initializeUserFolders(String email) {
+    private void initializeUserFolders(String email) throws SQLException {
+        folderService.createDefaultFolders(email);
         Map<String, Folder> folders = new HashMap<>();
         folders.put("inbox", new Folder("inbox", true));
         folders.put("spam", new Folder("spam", true));
@@ -159,13 +159,21 @@ public class EmailServer {
     // authenticates user login attempt
     private void handleLogin(String credentials, ObjectInputStream in, ObjectOutputStream out) throws IOException {
         String[] parts = credentials.split(":");
+        if (parts.length != 2) {
+            out.writeObject("LOGIN_FAILED:Invalid credentials");
+            out.flush();
+            return;
+        }
         String email = parts[0];
         String password = parts[1];
 
-        Integer userId = emailToId.get(email);
-        if (userId != null) {
-            User user = users.get(userId);
+        try {
+            User user = userService.getUserByEmail(email);
             if (user != null && user.getPassword().equals(password)) {
+                // Initialize user folders if not already done
+                if (!userFolders.containsKey(email)) {
+                    initializeUserFolders(email);
+                }
                 out.writeObject("LOGIN_SUCCESS");
                 out.writeObject(user);
                 out.flush();
@@ -173,9 +181,10 @@ public class EmailServer {
                 out.writeObject("LOGIN_FAILED:Invalid email or password");
                 out.flush();
             }
-        } else {
-            out.writeObject("LOGIN_FAILED:User not found");
+        } catch (SQLException e) {
+            out.writeObject("LOGIN_FAILED:Database error");
             out.flush();
+            e.printStackTrace();
         }
     }
 
@@ -186,18 +195,31 @@ public class EmailServer {
         String email = parts[1];
         String password = parts[2];
 
-        if (emailToId.containsKey(email)) {
-            out.writeObject("REGISTER_FAILED:Email already exists");
-            out.flush();
-            return;
-        }
+        try {
+            // Check if user already exists
+            if (userService.getUserByEmail(email) != null) {
+                out.writeObject("REGISTER_FAILED:Email already exists");
+                out.flush();
+                return;
+            }
 
-        User newUser = new User(name, email, password);
-        users.put(newUser.getId(), newUser);
-        emailToId.put(email, newUser.getId());
-        initializeUserFolders(email);
-        out.writeObject("REGISTER_SUCCESS");
-        out.flush();
+            // Create new user
+            User newUser = new User(name, email, password);
+            userService.createUser(newUser);
+            
+            // Initialize user folders
+            initializeUserFolders(email);
+            
+            out.writeObject("REGISTER_SUCCESS");
+            out.flush();
+        } catch (SQLException e) {
+            out.writeObject("REGISTER_FAILED:Database error");
+            out.flush();
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            out.writeObject("REGISTER_FAILED:" + e.getMessage());
+            out.flush();
+        }
     }
 
     // moves an email between folders

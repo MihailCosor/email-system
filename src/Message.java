@@ -1,7 +1,5 @@
-import java.io.Serializable;
-
 // base class for all message types in the system, providing common messaging functionality
-public abstract class Message implements Serializable {
+public abstract class Message {
     // sender's email address or identifier
     protected String from;
     // recipient's email address or identifier
@@ -12,6 +10,14 @@ public abstract class Message implements Serializable {
     protected String content;
     // timestamp when the message was created
     protected DateTime timestamp;
+
+    // default constructor
+    public Message() {
+        this.from = "";
+        this.to = "";
+        this.subject = "";
+        this.content = "";
+    }
 
     // creates a new message with sender, recipient, subject, and content
     public Message(String from, String to, String subject, String content) {

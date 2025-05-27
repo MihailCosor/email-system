@@ -20,7 +20,8 @@ public class FolderService extends GenericDatabaseService<Folder> {
     public void createFolder(String folderName, String userEmail) throws SQLException {
         // Check if folder already exists for this user
         if (getFolderByNameAndUser(folderName, userEmail) != null) {
-            throw new IllegalArgumentException("Folder with this name already exists for this user");
+            // simply return if it exists
+            return;
         }
 
         String[] columns = {"folder_name", "user_email"};
