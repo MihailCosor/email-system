@@ -190,7 +190,7 @@ public class Menu {
     }
 
     private void handleSendEmail() {
-        System.out.println("\n1. Do you want to select from contacts?: ");
+        System.out.println("\n1. Do you want to select from contacts? (1/0): ");
         int choice = getIntInput();
         String to = null;
 

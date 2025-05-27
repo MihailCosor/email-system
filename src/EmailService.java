@@ -20,12 +20,6 @@ public class EmailService extends GenericDatabaseService<Email> {
     }
 
     public int createEmail(Email email, int folderId) throws SQLException {
-        System.out.println("Creating email in database:");
-        System.out.println("From: " + email.getFrom());
-        System.out.println("To: " + email.getTo());
-        System.out.println("Subject: " + email.getSubject());
-        System.out.println("Folder ID: " + folderId);
-        
         String[] columns = {"sender", "recipient", "subject", "content", "folder_id"};
         Object[] values = {
             email.getFrom(),
@@ -58,7 +52,7 @@ public class EmailService extends GenericDatabaseService<Email> {
 
     public void updateEmailReadStatus(int emailId, boolean isRead) throws SQLException {
         String[] columns = {"is_read"};
-        Object[] values = {isRead};
+        Object[] values = {isRead ? 1 : 0};
         update(TABLE_NAME, columns, values, "id = ?", new Object[]{emailId});
     }
 
@@ -81,9 +75,12 @@ public class EmailService extends GenericDatabaseService<Email> {
             rs.getString("content")
         );
         email.setId(rs.getInt("id"));
-        email.setRead(rs.getBoolean("is_read"));
         email.setFolderId(rs.getInt("folder_id"));
-        
+
+        Boolean isRead = rs.getInt("is_read") == 1; // SQLite uses 1 for true, 0 for false
+        email.setRead(isRead);
+
+
         // Handle SQLite timestamp format
         String timestampStr = rs.getString("timestamp");
         if (timestampStr != null) {

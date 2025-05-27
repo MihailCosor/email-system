@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS emails (
     subject VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_read BOOLEAN DEFAULT FALSE,
+    is_read INTEGER DEFAULT 0,
     folder_id INTEGER,
     FOREIGN KEY (sender) REFERENCES users(email),
     FOREIGN KEY (recipient) REFERENCES users(email),

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
+import java.sql.SQLException;
 
 // represents a user of the email system with authentication and contact management
 public class User extends Person implements Serializable {
@@ -13,6 +14,7 @@ public class User extends Person implements Serializable {
     private LocalDateTime lastLogin;
     // non-serializable email client instance for server communication
     private transient EmailClient emailClient;
+    private transient ContactService contactService;
     // set of user's contacts for quick lookup
     private Set<Contact> contacts;
 
@@ -21,6 +23,7 @@ public class User extends Person implements Serializable {
         super();
         this.lastLogin = LocalDateTime.now();
         this.contacts = new HashSet<>();
+        initializeServices();
     }
 
     // creates a new user with basic information and validates email format
@@ -29,22 +32,23 @@ public class User extends Person implements Serializable {
         this.password = password;
         this.lastLogin = LocalDateTime.now();
         this.contacts = new HashSet<>();
-        initializeEmailClient();
+        initializeServices();
 
         if (!isValidEmail(email)) {
             throw new IllegalArgumentException("Invalid email format. Email must end with '@mihail.ro' or '@example.com'");
         }
     }
 
-    // initializes a new email client instance
-    private void initializeEmailClient() {
+    // initializes services
+    private void initializeServices() {
         this.emailClient = new EmailClient();
+        this.contactService = ContactService.getInstance();
     }
 
-    // custom deserialization to reinitialize transient email client
+    // custom deserialization to reinitialize transient fields
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
         in.defaultReadObject();
-        initializeEmailClient();
+        initializeServices();
     }
 
     // basic getters
@@ -86,15 +90,38 @@ public class User extends Person implements Serializable {
 
     // contact management operations
     public boolean addContact(String name, String email) {
-        return contacts.add(new Contact(name, email));
+        try {
+            Contact contact = new Contact(name, email);
+            contactService.createContact(contact);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Failed to add contact: " + e.getMessage());
+            return false;
+        }
     }
 
     public boolean removeContact(String email) {
-        return contacts.removeIf(contact -> contact.getEmail().equals(email));
+        try {
+            Contact contact = contactService.getContactByEmail(email);
+            if (contact != null) {
+                contactService.deleteContact(contact.getId());
+                return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            System.err.println("Failed to remove contact: " + e.getMessage());
+            return false;
+        }
     }
 
     public boolean removeContact(Contact contact) {
-        return contacts.remove(contact);
+        try {
+            contactService.deleteContact(contact.getId());
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Failed to remove contact: " + e.getMessage());
+            return false;
+        }
     }
 
     // returns a defensive copy of contacts set
@@ -104,14 +131,21 @@ public class User extends Person implements Serializable {
 
     // returns contacts as a list for ordered display
     public List<Contact> getContactsList() {
-        return new ArrayList<>(contacts);
+        try {
+            return contactService.getAllContacts();
+        } catch (SQLException e) {
+            System.err.println("Failed to get contacts: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
     // finds a contact by email address
     public Contact findContact(String email) {
-        return contacts.stream()
-                .filter(contact -> contact.getEmail().equals(email))
-                .findFirst()
-                .orElse(null);
+        try {
+            return contactService.getContactByEmail(email);
+        } catch (SQLException e) {
+            System.err.println("Failed to find contact: " + e.getMessage());
+            return null;
+        }
     }
 }
