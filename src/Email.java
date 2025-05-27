@@ -1,4 +1,5 @@
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 // represents an email message with read status and folder organization
 public class Email extends Message {
@@ -23,4 +24,8 @@ public class Email extends Message {
     public void setRead(boolean read) { this.read = read; }
     // moves the email to a different folder
     public void setFolder(String folder) { this.folder = folder; }
+
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp.setDateTime(timestamp);
+    }
 } 

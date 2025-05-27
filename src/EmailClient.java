@@ -49,12 +49,12 @@ public class EmailClient {
             Object response = in.readObject();
             if (response instanceof String) {
                 String responseStr = (String) response;
-                if (responseStr.equals("CONNECTED")) {
+                if (responseStr.equals("CONNECT_SUCCESS")) {
                     this.connected = true;
                     startInboxListener();
                     return true;
-                } else if (responseStr.startsWith("CONNECTION_FAILED:")) {
-                    System.out.println(responseStr.substring("CONNECTION_FAILED:".length()));
+                } else if (responseStr.startsWith("CONNECT_FAILED:")) {
+                    System.out.println(responseStr.substring("CONNECT_FAILED:".length()));
                     disconnect();
                     return false;
                 }

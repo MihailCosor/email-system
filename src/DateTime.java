@@ -52,4 +52,8 @@ public class DateTime implements Serializable, Comparable<DateTime> {
     public String toString() {
         return dateTime.toString();
     }
+
+    public void setDateTime(LocalDateTime dateTime) {
+        this.dateTime = dateTime;
+    }
 } 
