@@ -47,30 +47,6 @@ public class EmailServer {
         }
     }
 
-    // creates test users for development/testing
-    private void initializeDummyUsers() {
-        User admin = new User("Admin", "admin@mihail.ro", "admin");
-        User test = new User("Test", "test@mihail.ro", "test");
-        
-        users.put(admin.getId(), admin);
-        users.put(test.getId(), test);
-        
-        emailToId.put(admin.getEmail(), admin.getId());
-        emailToId.put(test.getEmail(), test.getId());
-
-        initializeUserFolders(admin.getEmail());
-        initializeUserFolders(test.getEmail());
-
-        // add test emails to admin's inbox
-        Folder adminInbox = userFolders.get(admin.getEmail()).get("inbox");
-        adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email", "This is a test email"));
-        adminInbox.addEmail(new Email("test@mihail.ro", "admin@mihail.ro", "Test Email 2", "This is a test email 2"));
-        
-        // set up test contacts
-        users.get(admin.getId()).addContact("Test", "test@mihail.ro");
-        users.get(test.getId()).addContact("Admin", "admin@mihail.ro");
-    }
-
     // creates default folders for a new user
     private void initializeUserFolders(String email) {
         Map<String, Folder> folders = new HashMap<>();

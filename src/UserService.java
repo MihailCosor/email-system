@@ -1,14 +1,14 @@
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
 
-public class UserService {
+public class UserService extends GenericDatabaseService<User> {
     private static UserService instance;
-    private final GenericDatabaseService<User> dbService;
     private static final String TABLE_NAME = "users";
 
     private UserService() {
-        this.dbService = GenericDatabaseService.getInstance();
+        super();
     }
 
     public static synchronized UserService getInstance() {
@@ -19,57 +19,49 @@ public class UserService {
     }
 
     public void createUser(User user) throws SQLException {
-        System.out.println("Creating user in database: " + user.getEmail());
+        if (!isValidEmail(user.getEmail())) {
+            throw new IllegalArgumentException("Invalid email format. Email must end with '@mihail.ro' or '@example.com'");
+        }
+
         String[] columns = {"email", "password", "name"};
-        Object[] values = {user.getEmail(), user.getPassword(), user.getName()};
-        System.out.println("Creating user: " + user.getEmail());
-        dbService.create(TABLE_NAME, columns, values);
+        Object[] values = {
+            user.getEmail(),
+            user.getPassword(),
+            user.getName()
+        };
+        create(TABLE_NAME, columns, values);
     }
 
     public User getUserByEmail(String email) throws SQLException {
-        List<User> users = dbService.read(
-                TABLE_NAME,
-                "email = ?",
-                new Object[]{email},
-                rs -> mapResultSetToUser(rs)
-        );
+        List<User> users = read(TABLE_NAME, "email = ?", new Object[]{email}, this::mapResultSet);
         return users.isEmpty() ? null : users.get(0);
     }
 
     public List<User> getAllUsers() throws SQLException {
-        return dbService.read(
-                TABLE_NAME,
-                null,
-                null,
-                rs -> mapResultSetToUser(rs)
-        );
+        return read(TABLE_NAME, null, null, this::mapResultSet);
     }
 
     public void updateUser(User user) throws SQLException {
         String[] columns = {"password", "name"};
         Object[] values = {user.getPassword(), user.getName()};
-        dbService.update(
-                TABLE_NAME,
-                columns,
-                values,
-                "email = ?",
-                new Object[]{user.getEmail()}
-        );
+        update(TABLE_NAME, columns, values, "email = ?", new Object[]{user.getEmail()});
     }
 
     public void deleteUser(String email) throws SQLException {
-        dbService.delete(
-                TABLE_NAME,
-                "email = ?",
-                new Object[]{email}
-        );
+        delete(TABLE_NAME, "email = ?", new Object[]{email});
     }
 
-    private User mapResultSetToUser(ResultSet rs) throws SQLException {
-        return new User(
-                rs.getString("name"),
-                rs.getString("email"),
-                rs.getString("password")
+    private boolean isValidEmail(String email) {
+        return email != null && (email.endsWith("@mihail.ro") || email.endsWith("@example.com"));
+    }
+
+    @Override
+    protected User mapResultSet(ResultSet rs) throws SQLException {
+        User user = new User(
+            rs.getString("name"),
+            rs.getString("email"),
+            rs.getString("password")
         );
+        return user;
     }
 }

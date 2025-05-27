@@ -5,7 +5,7 @@ import java.util.Set;
 import java.util.HashSet;
 
 // represents a user of the email system with authentication and contact management
-public class User extends Person {
+public class User extends Person implements Serializable {
     // hashed password for authentication
     private String password;
     // timestamp of the user's most recent login

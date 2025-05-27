@@ -2,19 +2,11 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GenericDatabaseService<T> {
-    private static GenericDatabaseService instance;
+public abstract class GenericDatabaseService<T> {
     private final DatabaseConnection dbConnection;
 
-    private GenericDatabaseService() {
+    protected GenericDatabaseService() {
         this.dbConnection = DatabaseConnection.getInstance();
-    }
-
-    public static synchronized GenericDatabaseService getInstance() {
-        if (instance == null) {
-            instance = new GenericDatabaseService();
-        }
-        return instance;
     }
 
     public void create(String tableName, String[] columns, Object[] values) throws SQLException {
@@ -122,4 +114,6 @@ public class GenericDatabaseService<T> {
     public interface ResultSetMapper<T> {
         T map(ResultSet rs) throws SQLException;
     }
+
+    protected abstract T mapResultSet(ResultSet rs) throws SQLException;
 }

@@ -2,13 +2,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-public class ContactService {
+public class ContactService extends GenericDatabaseService<Contact> {
     private static ContactService instance;
-    private final GenericDatabaseService<Contact> dbService;
     private static final String TABLE_NAME = "contacts";
 
     private ContactService() {
-        this.dbService = GenericDatabaseService.getInstance();
+        super();
     }
 
     public static synchronized ContactService getInstance() {
@@ -21,53 +20,40 @@ public class ContactService {
     public void createContact(Contact contact) throws SQLException {
         String[] columns = {"name", "email"};
         Object[] values = {contact.getName(), contact.getEmail()};
-        dbService.create(TABLE_NAME, columns, values);
+        create(TABLE_NAME, columns, values);
     }
 
-    public List<Contact> getContactsByUser(String userEmail) throws SQLException {
-        return dbService.read(
-                TABLE_NAME,
-                "user_email = ?",
-                new Object[]{userEmail},
-                rs -> mapResultSetToContact(rs)
-        );
+    public List<Contact> getAllContacts() throws SQLException {
+        return read(TABLE_NAME, null, null, this::mapResultSet);
     }
 
-    public Contact getContactByEmail(String email, String userEmail) throws SQLException {
-        List<Contact> contacts = dbService.read(
-                TABLE_NAME,
-                "email = ? AND user_email = ?",
-                new Object[]{email, userEmail},
-                rs -> mapResultSetToContact(rs)
-        );
+    public Contact getContactById(int id) throws SQLException {
+        List<Contact> contacts = read(TABLE_NAME, "id = ?", new Object[]{id}, this::mapResultSet);
+        return contacts.isEmpty() ? null : contacts.get(0);
+    }
+
+    public Contact getContactByEmail(String email) throws SQLException {
+        List<Contact> contacts = read(TABLE_NAME, "email = ?", new Object[]{email}, this::mapResultSet);
         return contacts.isEmpty() ? null : contacts.get(0);
     }
 
     public void updateContact(Contact contact) throws SQLException {
-        String[] columns = {"name"};
-        Object[] values = {contact.getName()};
-        dbService.update(
-                TABLE_NAME,
-                columns,
-                values,
-                "email = ?",
-                new Object[]{contact.getEmail()}
-        );
+        String[] columns = {"name", "email"};
+        Object[] values = {contact.getName(), contact.getEmail()};
+        update(TABLE_NAME, columns, values, "id = ?", new Object[]{contact.getId()});
     }
 
-    public void deleteContact(String email, String userEmail) throws SQLException {
-        dbService.delete(
-                TABLE_NAME,
-                "email = ? AND user_email = ?",
-                new Object[]{email, userEmail}
-        );
+    public void deleteContact(int id) throws SQLException {
+        delete(TABLE_NAME, "id = ?", new Object[]{id});
     }
 
-    private Contact mapResultSetToContact(ResultSet rs) throws SQLException {
+    @Override
+    protected Contact mapResultSet(ResultSet rs) throws SQLException {
         Contact contact = new Contact(
-                rs.getString("name"),
-                rs.getString("email")
+            rs.getString("name"),
+            rs.getString("email")
         );
+        contact.setId(rs.getInt("id"));
         return contact;
     }
 }

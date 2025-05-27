@@ -3,13 +3,12 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
-public class EmailService {
+public class EmailService extends GenericDatabaseService<Email> {
     private static EmailService instance;
-    private final GenericDatabaseService<Email> dbService;
     private static final String TABLE_NAME = "emails";
 
     private EmailService() {
-        this.dbService = GenericDatabaseService.getInstance();
+        super();
     }
 
     public static synchronized EmailService getInstance() {
@@ -19,83 +18,64 @@ public class EmailService {
         return instance;
     }
 
-    public void createEmail(Email email) throws SQLException {
-        String[] columns = {"sender", "recipient", "subject", "content", "timestamp", "is_read", "folder"};
+    public void createEmail(Email email, int folderId) throws SQLException {
+        String[] columns = {"sender", "recipient", "subject", "content", "folder_id"};
         Object[] values = {
-                email.getFrom(),
-                email.getTo(),
-                email.getSubject(),
-                email.getContent(),
-                email.getTimestamp(),
-                email.isRead(),
-                email.getFolder()
+            email.getFrom(),
+            email.getTo(),
+            email.getSubject(),
+            email.getContent(),
+            folderId
         };
-        dbService.create(TABLE_NAME, columns, values);
+        create(TABLE_NAME, columns, values);
+    }
+
+    public Email getEmailById(int emailId) throws SQLException {
+        List<Email> emails = read(TABLE_NAME, "id = ?", new Object[]{emailId}, this::mapResultSet);
+        return emails.isEmpty() ? null : emails.get(0);
+    }
+
+    public List<Email> getEmailsByFolder(int folderId) throws SQLException {
+        return read(TABLE_NAME, "folder_id = ?", new Object[]{folderId}, this::mapResultSet);
     }
 
     public List<Email> getEmailsByRecipient(String recipient) throws SQLException {
-        return dbService.read(
-                TABLE_NAME,
-                "recipient = ?",
-                new Object[]{recipient},
-                rs -> mapResultSetToEmail(rs)
-        );
+        return read(TABLE_NAME, "recipient = ?", new Object[]{recipient}, this::mapResultSet);
     }
 
     public List<Email> getEmailsBySender(String sender) throws SQLException {
-        return dbService.read(
-                TABLE_NAME,
-                "sender = ?",
-                new Object[]{sender},
-                rs -> mapResultSetToEmail(rs)
-        );
+        return read(TABLE_NAME, "sender = ?", new Object[]{sender}, this::mapResultSet);
     }
 
-    public void updateEmailReadStatus(String sender, String recipient, String subject, boolean isRead) throws SQLException {
+    public void updateEmailReadStatus(int emailId, boolean isRead) throws SQLException {
         String[] columns = {"is_read"};
         Object[] values = {isRead};
-        dbService.update(
-                TABLE_NAME,
-                columns,
-                values,
-                "sender = ? AND recipient = ? AND subject = ?",
-                new Object[]{sender, recipient, subject}
-        );
+        update(TABLE_NAME, columns, values, "id = ?", new Object[]{emailId});
     }
 
-    public void moveEmailToFolder(String sender, String recipient, String subject, String folder) throws SQLException {
-        String[] columns = {"folder"};
-        Object[] values = {folder};
-        dbService.update(
-                TABLE_NAME,
-                columns,
-                values,
-                "sender = ? AND recipient = ? AND subject = ?",
-                new Object[]{sender, recipient, subject}
-        );
+    public void moveEmailToFolder(int emailId, int folderId) throws SQLException {
+        String[] columns = {"folder_id"};
+        Object[] values = {folderId};
+        update(TABLE_NAME, columns, values, "id = ?", new Object[]{emailId});
     }
 
-    public void deleteEmail(String sender, String recipient, String subject) throws SQLException {
-        dbService.delete(
-                TABLE_NAME,
-                "sender = ? AND recipient = ? AND subject = ?",
-                new Object[]{sender, recipient, subject}
-        );
+    public void deleteEmail(int emailId) throws SQLException {
+        delete(TABLE_NAME, "id = ?", new Object[]{emailId});
     }
 
-    private Email mapResultSetToEmail(ResultSet rs) throws SQLException {
+    @Override
+    protected Email mapResultSet(ResultSet rs) throws SQLException {
         Email email = new Email(
-                rs.getString("sender"),
-                rs.getString("recipient"),
-                rs.getString("subject"),
-                rs.getString("content")
+            rs.getString("sender"),
+            rs.getString("recipient"),
+            rs.getString("subject"),
+            rs.getString("content")
         );
+        email.setRead(rs.getBoolean("is_read"));
         Timestamp timestamp = rs.getTimestamp("timestamp");
         if (timestamp != null) {
             email.setTimestamp(timestamp.toLocalDateTime());
         }
-        email.setRead(rs.getBoolean("is_read"));
-        email.setFolder(rs.getString("folder"));
         return email;
     }
 }

@@ -1,7 +1,5 @@
-import java.io.Serializable;
-
 // base class for all person entities in the system (users, contacts, etc.)
-public abstract class Person implements Serializable {
+public abstract class Person {
     // auto-incrementing counter for generating unique person ids
     protected static int nextId = 1;
     // unique identifier for each person
