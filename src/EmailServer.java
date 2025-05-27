@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -35,7 +36,14 @@ public class EmailServer {
         if (isServerMode) {
             this.clientOutputStreams = new ConcurrentHashMap<>();
             this.executorService = Executors.newCachedThreadPool();
-            initializeDummyUsers();
+//            initializeDummyUsers();
+            // init database
+            try{
+                DatabaseInit.initDB();
+            } catch (SQLException e) {
+                System.out.println("Database initialization failed: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
