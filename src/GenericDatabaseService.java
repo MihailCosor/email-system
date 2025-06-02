@@ -36,6 +36,8 @@ public abstract class GenericDatabaseService<T> {
             }
             int rowsAffected = pstmt.executeUpdate();
             System.out.println("Rows affected: " + rowsAffected);
+            // log the full query
+            Logger.getInstance().log("INSERT_" + tableName + "_VALUES:" + Arrays.toString(values));
             
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -55,6 +57,7 @@ public abstract class GenericDatabaseService<T> {
         if (whereClause != null && !whereClause.isEmpty()) {
             query += " WHERE " + whereClause;
         }
+        Logger.getInstance().log(query + "_PARAMS:" + (params != null ? Arrays.toString(params) : "[]"));
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
@@ -87,6 +90,9 @@ public abstract class GenericDatabaseService<T> {
             query.append(" WHERE ").append(whereClause);
         }
 
+        Logger.getInstance().log(query + "_VALUES:" + Arrays.toString(values) +
+                (whereParams != null ? "_WHERE_PARAMS:" + Arrays.toString(whereParams) : ""));
+
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query.toString())) {
             int paramIndex = 1;
@@ -112,6 +118,8 @@ public abstract class GenericDatabaseService<T> {
         if (whereClause != null && !whereClause.isEmpty()) {
             query += " WHERE " + whereClause;
         }
+
+        Logger.getInstance().log(query + "_PARAMS:" + (params != null ? Arrays.toString(params) : "[]"));
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {

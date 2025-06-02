@@ -12,6 +12,8 @@ public class Main {
         String choice = scanner.nextLine();
 
         if (choice.equals("1")) {
+            Logger.getInstance().log("Server mode");
+
             // initialize and start the email server in singleton mode
             EmailServer server = EmailServer.getInstance();
             server.start();
@@ -29,6 +31,7 @@ public class Main {
             // cleanup server resources on exit
             server.stop();
         } else if (choice.equals("2")) {
+            Logger.getInstance().log("Client mode");
             // launch the email client interface
             Menu menu = new Menu();
             menu.showMainMenu();
