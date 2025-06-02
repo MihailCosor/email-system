@@ -2,7 +2,7 @@
 
 ## 1. Definirea Sistemului
 
-Sistemul implementeaza o platforma de email care permite utilizatorilor sa trimita si sa primeasca mesaje intr-un mediu controlat. Sistemul este construit pe o arhitectura client-server, oferind o interfata de utilizare prin consola.
+Sistemul reprezinta o platforma de email cu interfata **CLI**. Aplicatia functioneaza pe o arhitectura client-server stabila, conexiunea dintre client si server se realizeaza prin **sockets**, iar serverul este aceasi aplicatie, aflata in "server mode". Pentru a gestiona mai multi utilizatori simultan, serverul utilizeaza **multithreading**, asigurand o performanta optima si o raspundere rapida. De asemenea, platforma integreaza o baza de date cu **JDBC** care asigura persistenta datelor si pastrarea mesajelor in timp.
 
 ### Actiuni/Interogari Disponibile:
 
@@ -94,11 +94,16 @@ public class EmailClient {
 2. **Persistenta Datelor**:
    - Obiectele sunt serializabile pentru stocare
    - Gestionare eficienta a sesiunilor utilizator
+   - Utilizare JDBC pentru persistenta datelor in baza de date
 
 3. **Securitate**:
    - Validare email (@mihail.ro sau @example.com)
    - Autentificare utilizator obligatorie
    - Separare date intre utilizatori
+
+4. **Logging**:
+   - Implementare de logging pentru monitorizarea activitatii sistemului
+   - Inregistrarea evenimentelor importante pentru audit si depanare
 
 ### Utilizare
 
@@ -120,6 +125,7 @@ java Main
 
 - Java Runtime Environment (JRE) 8 sau superior
 - Biblioteca standard Java pentru networking si I/O
+- JDBC pentru conectarea la baza de date
 
 ### Note de Implementare
 
